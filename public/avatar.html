@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Générateur d'avatar — Démo</title>
+  <style>
+    body{font-family:system-ui,Segoe UI,Roboto,Arial;background:#f3f4f6;color:#0b1220;padding:28px}
+    .wrap{max-width:640px;margin:0 auto;background:#fff;padding:20px;border-radius:10px;box-shadow:0 6px 20px rgba(2,6,23,0.06)}
+    label{display:block;margin-top:10px;font-weight:700}
+    input[type=text]{width:100%;padding:8px 10px;margin-top:8px;border-radius:8px;border:1px solid #e6eef6}
+    .row{display:flex;gap:16px;align-items:center;margin-top:14px}
+    img#avatar{width:160px;height:160px;border-radius:8px;background:#fff;border:1px solid #e6eef6}
+    .hint{color:#475569;font-size:13px;margin-top:10px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Avatar (DiceBear)</h1>
+    <p class="hint">Entrez une "seed" pour générer l'avatar. Le champ mettra à jour l'image automatiquement.</p>
+
+    <label for="seed">Seed</label>
+    <input id="seed" name="seed" type="text" value="John"
+      oninput="document.getElementById('avatar').src='https://api.dicebear.com/9.x/pixel-art/svg?seed='+encodeURIComponent(this.value)" />
+
+    <div class="row">
+      <img id="avatar" alt="Avatar" src="https://api.dicebear.com/9.x/pixel-art/svg?seed=John">
+      <div>
+        <p class="hint">Exemples : <em>John</em>, <em>Alice</em>, <em>MonPseudo123</em></p>
+        <p class="hint">Pas (presque) de Javascript — juste un attribut <code>oninput</code>.</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

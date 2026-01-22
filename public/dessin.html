@@ -1,0 +1,75 @@
+<!doctype html>
+<html>
+    <meta name="author" content="nabif"/>
+    <meta
+  name="description"
+  content="Site web de Nabif." />
+
+    <head>
+        <link rel="stylesheet" href="styles.css" />
+        <meta= charset="utf-8" />
+        <title>Nabif</title>
+
+
+
+    </head>
+    <!-- <p>Je suis dans un commmentaire!</p> -->
+    <body>
+        <ul class="navbar">
+            <li><a href="index.html" title="Accueil">Accueil</a></li>
+            <li><a href="ressources_nsi.html" title="Ressources NSI">Ressources NSI</a></li>
+            <li><a href="tablature.html" title="Tablature">Tablature</a></li>
+            <li><a class="active" href="dessin.html" title="Dessin">Dessin</a></li>
+            <li><a href="carnet_lecture.html" title="Carnet de lecture">Carnet de lecture</a></li>
+        </ul>
+        
+        <div class="fond">
+            <h1>Dessin</h1>
+            <div id="gallery">
+                <p>Galerie :</p>
+                <div id="viewer">
+                    <img id="big-image" src="../ressource/img/foret.png" alt="Image principale">
+                </div>
+                <br>
+                <a id="download-link" href="../ressource/img/foret.png" download>
+                    Télécharger l'image.
+                </a>
+                <div id="miniature">
+                    <img src="../ressource/img/foret.png" alt="Forêt" onclick="changeImage(this)">
+                    <img src="../ressource/img/montagne.png" alt="Montagne" onclick="changeImage(this)">
+                    <img src="../ressource/img/kawa.png" alt="Lapin" onclick="changeImage(this)">
+                </div>
+
+                <p>
+                Les images présentes sur ce site ont été créées par <strong>Nabif</strong> et sont mises à disposition
+                sous licence <strong>Creative Commons Attribution – Pas d’Utilisation Commerciale 4.0 (CC BY-NC 4.0)</strong>.
+                </p>
+
+                <p>
+                Toute réutilisation est autorisée à condition de :
+                <ul class="liste-texte">
+                  <li>créditer l’auteur Nabif</li>
+                  <li>ne pas en faire un usage commercial</li>
+                </ul>
+                </p>
+
+            </div>
+
+
+        </div>
+
+    <script>
+    function changeImage(img) {
+        const bigImage = document.getElementById("big-image");
+        const downloadLink= document.getElementById("download-link");
+
+        bigImage.src = img.src;
+        bigImage.alt = img.alt;
+    
+        downloadLink.href = img.src;
+    }
+    </script>
+    </body>
+
+
+</html>

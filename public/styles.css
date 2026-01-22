@@ -1,0 +1,126 @@
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background-color:#C5C6C6;
+
+}
+
+
+h1 {
+    color : #C5C6C6;
+    background-color : #516079;
+    border-bottom : 3px solid #2E3244;
+    border-top : 3px solid #2E3244;
+    text-align: center;
+}
+
+.navbar {
+    position : fixed;
+    width:100%;
+    list-style-type: none;
+    margin: 0;
+    padding: 0; 
+    overflow : hidden;
+    background-color: #516079;
+    border-bottom : 3px solid #2E3244;
+}
+
+.navbar li{
+    float : left;
+}
+
+.navbar li a{
+    display : block;
+    color : white;
+    text-align: center;
+    padding : 0.75rem 1.25rem;
+    text-decoration: none;
+}
+
+.navbar li a:hover{
+    background-color: #2E3244;
+}
+
+.navbar li a.active{
+    background-color : #F1895C;
+}
+
+.liste-texte{
+    list-style-position: inside;
+    text-align: center;
+}
+
+#accueil_fond {
+    min-height: 100vh; /*C'est le zoom de l'image par rapport à l'écran*/
+    background-image: url("../ressource/img/fond_accueil.jpg");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+
+    color: white;
+    padding: 40px ;
+}
+
+#dessin_fond{ /*Sert a rien, faut remettre dans le html si on veut charger l'image foret derriere*/
+    min-height: 100vh;
+    background-image: url("../ressource/img/foret.png");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    color: white;
+}
+
+.fond{ /*. pour les classe, qui ne sont pas obligatoirement unique comparé au id*/ 
+    background-color: #C5C6C6;
+    padding-top:2%;
+}
+
+.marge{
+    margin:2%;
+}
+
+
+#gallery{
+    padding : 40px;
+    color: #C5C6C6;
+    max-width: 90%;
+    text-align:center;
+    margin : auto;
+    background : #516079;
+    border: 3px solid #2E3244;
+    border-radius:100px;
+}
+
+#download-link{
+    color : #C5C6C6;
+    text-decoration: none;
+}
+
+#viewer {
+    display : inline-block; /*Permet de s'adapter a l'image pour le cadre.*/
+}
+
+#viewer img {
+    width: 100%;
+    max-height: 400px;
+    object-fit: contain;
+    margin-bottom: 20px;
+    border: 5px solid #2E3244;
+    box-sizing: border-box;  
+    border-radius: 10px;      
+
+}
+
+#miniature img {
+    width: 100px;
+    margin: 5px;
+    cursor: pointer;
+    border: 2px solid transparent;
+}
+
+#miniature img:hover {
+    border-color: #2E3244;
+}
+
+
