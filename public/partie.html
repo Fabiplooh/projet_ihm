@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Partie</title>
+    <!--
+    <style>
+        body { margin: 0; overflow: hidden; background: #222; }
+        canvas { display: block; background: #333; }
+    </style>
+    -->
+    <link rel="stylesheet" href="game_style.css" />
+
+</head>
+<body>
+    <canvas id="c"></canvas>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const canvas = document.getElementById("c");
+        const ctx = canvas.getContext("2d");
+        canvas.width = 800;
+        canvas.height = 600;
+
+        const socket = io();
+
+        socket.on("connect", () => console.log("Socket.IO connecté", socket.id));
+        socket.on("connect_error", (err) => console.error("Erreur connexion", err));
+
+        // Choisir une partie et une map
+        const partieId = "partie1";
+        const mapId = "map1";
+        socket.emit("join", { partieId, mapId });
+
+        // Actions clavier
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "ArrowLeft") socket.emit("action", "left");
+            if (e.key === "ArrowRight") socket.emit("action", "right");
+            if (e.key === " ") socket.emit("action", "jump");
+        });
+
+        let joueurs = {};
+
+        // Recevoir l'état du serveur
+        socket.on("state", (data) => {
+            joueurs = data;
+        });
+
+        // Dessin
+        function loop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // dessiner le sol (toujours à 580)
+            ctx.fillStyle = "grey";
+            ctx.fillRect(0, 560, 800, 40);
+
+            // dessiner tous les joueurs
+            for (const id in joueurs) {
+                const p = joueurs[id];
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate(p.angle);
+                ctx.fillStyle = id === socket.id ? "orange" : "blue";
+                ctx.fillRect(-20, -20, 40, 40);
+                ctx.restore();
+            }
+
+            requestAnimationFrame(loop);
+        }
+
+        loop();
+    </script>
+</body>
+</html>
