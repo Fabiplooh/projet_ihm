@@ -1,0 +1,8 @@
+Questionnaire pour choisir partie
+Tchat
+Choisir sa couleur ?
+Rendre le code propre en particulier sortir le js du html et faire du css
+
+Faire en sorte que les gens qui join un salon deja remplis voit que c'est pas la map forcément qu'ils voulaient
+Rajouter nom au dessus du joueur
+Rejoindre des maps deja existante avec un menu déroualnt en plus de pouvoir taper 

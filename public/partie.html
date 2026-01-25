@@ -14,6 +14,17 @@
 
 </head>
 <body>
+    <div id="menu">
+        <h2>Rejoindre une partie</h2>
+        <input id="partieId" placeholder="Nom de la partie" />
+        <select id="mapSelect">
+            <option value="map1">Map 1</option>
+            <option value="map2">Map 2</option>
+        </select>
+        <button id="joinBtn">Rejoindre</button>
+    </div>
+
+
     <canvas id="c"></canvas>
     <script src="/socket.io/socket.io.js"></script>
     <script>
@@ -22,21 +33,53 @@
         canvas.width = 800;
         canvas.height = 600;
 
+        const menu = document.getElementById("menu");
+        const joinBtn = document.getElementById("joinBtn");
+        const partieInput = document.getElementById("partieId");
+        const mapSelect = document.getElementById("mapSelect");
+
         const socket = io();
+
         const keys = {
             left: false,
             right: false
         };
 
-
+        let joueurs = {};
+        let colliders =[];
+        let joined =false; 
 
         socket.on("connect", () => console.log("Socket.IO connecté", socket.id));
         socket.on("connect_error", (err) => console.error("Erreur connexion", err));
 
-        // Choisir une partie et une map
-        const partieId = "partie1";
-        const mapId = "map1";
-        socket.emit("join", { partieId, mapId });
+        // Réception des colliders (map) - On attend activement que le serveur envoie
+        socket.on("map", (data) => { 
+            colliders = data; 
+        });
+
+        // Réception état des joueurs
+        socket.on("state", (data) => { 
+            joueurs = data;
+        });
+
+        // Bouton rejoindre
+        joinBtn.addEventListener("click", () => {
+            const partieId = partieInput.value.trim();
+            const mapId = mapSelect.value;
+
+            if (!partieId) {
+                alert("Entre un nom de partie");
+                return;
+            } 
+            socket.emit("join", { partieId, mapId });
+
+            menu.style.display = "none";
+            canvas.style.display = "block";
+            joined = true;
+        });
+        
+
+
 
         // Actions clavier
         document.addEventListener("keydown", (e) => {
@@ -69,20 +112,10 @@
             }
         });
 
-        let joueurs = {};
-
-        // Recevoir l'état du serveur
-        socket.on("state", (data) => {
-            joueurs = data;
-        });
-
         // Dessin
         function loop() {
+            if (!joined) return requestAnimationFrame(loop);
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // dessiner le sol (toujours à 580)
-            ctx.fillStyle = "grey";
-            ctx.fillRect(0, 560, 800, 40);
 
             // dessiner tous les joueurs
             for (const id in joueurs) {
@@ -93,6 +126,17 @@
                 ctx.fillStyle = id === socket.id ? "orange" : "blue";
                 ctx.fillRect(-20, -20, 40, 40);
                 ctx.restore();
+            }
+
+            // dessiner les colliders
+            ctx.fillStyle = "grey";
+            for (const c of colliders) {
+                ctx.fillRect(
+                    c.x - c.width / 2,
+                    c.y - c.height / 2,
+                    c.width,
+                    c.height
+                );
             }
 
             requestAnimationFrame(loop);

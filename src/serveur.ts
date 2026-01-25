@@ -17,34 +17,55 @@ app.use(express.json());
 app.use(express.urlencoded({extended: true}));
 
 // Maps stockées côté serveur (JSON)
+interface RectCollider {
+    x : number;
+    y : number;
+    width : number;
+    height : number;
+}
+
 interface MapData {
-  name: string;
-  ground: { x: number; y: number; width: number; height: number }[];
+    name: string;
+    colliders : RectCollider[];
 }
 
 const maps: Record<string, MapData> = {
-  "map1": { name: "Map 1", ground: [{ x: 400, y: 580, width: 800, height: 40 }] },
-  "map2": { name: "Map 2", ground: [
-      { x: 400, y: 580, width: 800, height: 40 },
-      { x: 400, y: 400, width: 200, height: 20 }
-  ]}
+    "map1": { 
+        name : "Map simple",
+        colliders : [
+            //Sol principal
+            { x: 400, y: 580, width: 800, height: 40 },
+            //plateforme
+            { x: 400, y: 400, width: 200, height: 20 },
+            { x: 250, y: 470, width: 200, height: 20 },
+        ]},
+    "map2": { 
+        name: "Map escalier", 
+        colliders : [
+            { x: 400, y: 580, width: 800, height: 40 },
+            { x: 250, y: 500, width: 200, height: 20 },
+            { x: 150, y: 420, width: 160, height: 20 },
+            { x: 300, y: 340, width: 120, height: 20 },  
+        ]}
 };
 
 // Parties actives
 interface Partie {
-  engine: Matter.Engine;
-  joueurs: Map<string, Matter.Body>;
-  interval: NodeJS.Timer;
-  mapId: string;
+    engine: Matter.Engine;
+    joueurs: Map<string, Matter.Body>;
+    interval: NodeJS.Timer;
+    mapId: string;
 }
+// On accède aux parties par un dico avec comme clé une "partieID" et l'interface Partie  
 const parties = new Map<string, Partie>();
 
-
+// Va nous permettre de stocker les inputs de chaques player. Ce sont donc des boolean stocker dans un dico avec comme clé le socket 
+// du joueur (qui est unique et creer a la connection). La clé string est la socket.id 
 const playerInputs = new Map<string, {
-  left: boolean;
-  right: boolean;
-  jump: boolean;
-}>();
+    left: boolean;
+    right: boolean;
+    jump: boolean;
+}>
 
 
 
@@ -56,7 +77,7 @@ app.get("/partie", (req: Request, res: Response) => {
 
 // Page d'accueil
 app.get("/", (req: Request, res: Response) => {
-  res.send(`<html>
+    res.send(`<html>
                <head>
                     <link rel="stylesheet" href="roulette.css" />
                     <title> Coucou les meef </title>
@@ -66,7 +87,8 @@ app.get("/", (req: Request, res: Response) => {
                    <p>Avec un serveur Express</p>
                </body>
             </html> 
-           `);
+           `
+    );
 });
 
 app.get("/roulette.css", (req : Request, res : Response) => {
@@ -82,17 +104,17 @@ app.get("/roulette.css", (req : Request, res : Response) => {
 
 // Addition simple
 app.all("/add", (req: Request, res: Response) => {
-  const a = Number(req.body.a ?? req.query.a);
-  const b = Number(req.body.b ?? req.query.b);
-  if (Number.isNaN(a) || Number.isNaN(b)) {
-    res.status(400).json({ error: "Invalid numbers" });
-    return;
-  }
-  const sum = a + b;
-  res.json({ result: sum });
+    const a = Number(req.body.a ?? req.query.a);
+    const b = Number(req.body.b ?? req.query.b);
+    if (Number.isNaN(a) || Number.isNaN(b)) {
+        res.status(400).json({ error: "Invalid numbers" });
+        return;
+    }
+    const sum = a + b;
+    res.json({ result: sum });
 });
 
-
+//Sert a détecter le sol pour éviter de sauter dans les airs et donc limité les double ou triple sauts
 function isOnGround(body: Matter.Body, bodies: Matter.Body[]) {
     const footY = body.bounds.max.y;
     const pointsX = [
@@ -126,123 +148,136 @@ const io = new Server(httpServer);
 // On a creer un serveur http et on connecte les joueurs (client html) qui se connecte sur la page partie. Ils sont ensuite mis dans la partie
 // correspondant à leur demande et sont connecté via socket avec socket.io
 io.on("connection", (socket) => {
-  console.log("Client connecté", socket.id);
+    console.log("Client connecté", socket.id);
 
-  // Rejoindre une partie et demander une map
-  socket.on("join", (data: { partieId: string; mapId: string }) => {
-    const { partieId, mapId } = data;
-    socket.join(partieId);
+    // Rejoindre une partie et demander une map
+    socket.on("join", (data: { partieId: string; mapId: string }) => {
+        const { partieId, mapId } = data;
+        //Creer une "room" pour cette partie. On peut ensuite envoyer a tout ceux dedans facilement : "io.to(partieId).emit("state", etat);"
+        socket.join(partieId);
 
-    let partie = parties.get(partieId);
+        let partie = parties.get(partieId);
 
-    if (!partie) {
-      const mapData = maps[mapId];
-      if (!mapData) return;
+        if (!partie) {
+            const mapData = maps[mapId];
+            if (!mapData) return;
 
-      const engine = Engine.create();
-      const joueurs = new Map<string, Matter.Body>();
+            const engine = Engine.create();
+            const joueurs = new Map<string, Matter.Body>();
 
-      // Créer le sol
-      mapData.ground.forEach(g => {
-        const ground = Bodies.rectangle(g.x, g.y, g.width, g.height, { isStatic: true });
-        World.add(engine.world, [ground]);
-      });
-
-      // Boucle de simulation
-        const interval = setInterval(() => {
-
-        const HORIZONTAL_SPEED = 6;
-        const STOP_MOUVEMENT = 0.8;
-
-        joueurs.forEach((body, socketId) => {
-            const input = playerInputs.get(socketId);
-            if (!input){
-                return;
-            } 
-
-            // Empêche la rotation (important pour un joueur)
-            Body.setInertia(body, Infinity);
-
-            let vx = body.velocity.x;
-
-            if (input.left) {
-                vx = -HORIZONTAL_SPEED;
-            } else if (input.right) {
-                vx = HORIZONTAL_SPEED;
-            } else {
-                vx *= STOP_MOUVEMENT; // arrêt fluide
-            }
-
-            
-            Body.setVelocity(body, {
-                x: vx,
-                y: body.velocity.y,
+            // Créer le sol
+            mapData.colliders.forEach(g => {
+                const ground = Bodies.rectangle(g.x, g.y, g.width, g.height, { isStatic: true });
+                World.add(engine.world, [ground]);
             });
 
+            //On met a jour l'etat du monde : la vitesse du joueur en fonction de son input (donc de la Hashmap PlayerInput)
+            const interval = setInterval(() => {
+        
+                const HORIZONTAL_SPEED = 6;
+                const STOP_MOUVEMENT = 0.8;
 
-            //  Jump
-            if (input.jump && isOnGround(body, engine.world.bodies)) {
-                Body.setVelocity(body, {
-                x: vx,
-                y: -8,
+                joueurs.forEach((body, socketId) => {
+                    const input = playerInputs.get(socketId);
+                    if (!input){
+                        return;
+                    } 
+
+                    // Empêche la rotation (important pour un joueur)
+                    Body.setInertia(body, Infinity);
+
+                    let vx = body.velocity.x;
+
+                    if (input.left) {
+                        vx = -HORIZONTAL_SPEED;
+                    } else if (input.right) {
+                        vx = HORIZONTAL_SPEED;
+                    } else {
+                        vx *= STOP_MOUVEMENT; // arrêt fluide
+                    }
+
+                
+                    Body.setVelocity(body, {
+                        x: vx,
+                        y: body.velocity.y,
+                    });
+
+
+                    //  Jump
+                    if (input.jump && isOnGround(body, engine.world.bodies)) {
+                        Body.setVelocity(body, {
+                        x: vx,
+                        y: -8,
+                        });
+                    input.jump = false;
+                    }
                 });
-            input.jump = false;
+                Engine.update(engine, 16);
+
+                // envoyer état à tous les clients de la partie
+                const etat: Record<string, { x: number; y: number; angle: number }> = {};
+                joueurs.forEach((body, id) => {
+                    etat[id] = { x: body.position.x, y: body.position.y, angle: body.angle };
+                });
+                // Ici on envoie bien qu'au gens de la room partieID
+                io.to(partieId).emit("state", etat);
+                io.to(partieId).emit("map", maps[mapId].colliders);
+            }, 16);
+
+            partie = { engine, joueurs, interval, mapId };
+            parties.set(partieId, partie);
+        }
+
+        // Ajouter le joueur a la partie :(dans tous les cas si on a une connection)
+        const playerBody = Bodies.rectangle(400, 0, 40, 40);
+        partie.joueurs.set(socket.id, playerBody);
+        World.add(partie.engine.world, [playerBody]);
+    });
+
+
+
+    // Actions du joueur
+    // On capte juste l'action et on change la valeur de la touche dans playerInputs 
+    socket.on("action", (action: string) => {
+        if (!playerInputs.has(socket.id)) {
+            playerInputs.set(socket.id, { left: false, right: false, jump: false });
+        }
+
+
+
+        const input = playerInputs.get(socket.id)!;
+
+        if (action === "left") input.left = true;
+        if (action === "right") input.right = true;
+        if (action === "stopLeft") input.left = false;
+        if (action === "stopRight") input.right = false;
+        if (action === "jump") input.jump = true;
+    });
+
+
+    socket.on("disconnecting", () => {
+        console.log("Client déconnecté", socket.id);
+        
+        for (const [partieId, partie] of parties.entries()) {
+            const body = partie.joueurs.get(socket.id);
+            if (body) {
+                World.remove(partie.engine.world, body);
+                partie.joueurs.delete(socket.id);
             }
-        });
 
-
-
-        Engine.update(engine, 16);
-
-        // envoyer état à tous les clients de la partie
-        const etat: Record<string, { x: number; y: number; angle: number }> = {};
-        joueurs.forEach((body, id) => {
-          etat[id] = { x: body.position.x, y: body.position.y, angle: body.angle };
-        });
-
-        io.to(partieId).emit("state", etat);
-      }, 16);
-
-      partie = { engine, joueurs, interval, mapId };
-      parties.set(partieId, partie);
-    }
-
-    // Ajouter le joueur
-    const playerBody = Bodies.rectangle(400, 0, 40, 40);
-    partie.joueurs.set(socket.id, playerBody);
-    World.add(partie.engine.world, [playerBody]);
-  });
-
-  // Actions du joueur
-socket.on("action", (action: string) => {
-    if (!playerInputs.has(socket.id)) {
-        playerInputs.set(socket.id, { left: false, right: false, jump: false });
-    }
-
-    const input = playerInputs.get(socket.id)!;
-
-    if (action === "left") input.left = true;
-    if (action === "right") input.right = true;
-    if (action === "stopLeft") input.left = false;
-    if (action === "stopRight") input.right = false;
-    if (action === "jump") input.jump = true;
-});
-
-
-  socket.on("disconnecting", () => {
-    console.log("Client déconnecté", socket.id);
-    for (const partie of parties.values()) {
-      const body = partie.joueurs.get(socket.id);
-      if (body) {
-        World.remove(partie.engine.world, body);
-        partie.joueurs.delete(socket.id);
-      }
-    }
-  });
+            //Gestion du dico si il n'y a plus de joueurs dans le salon courant 
+            if(partie.joueurs.size == 0){
+                //Typage en Timer donc chiant d'où la ligne un peu magique avec cast moche
+                clearInterval(partie.interval as unknown as any); // Stop la boucle qui envoie les données aux clients
+                parties.delete(partieId)
+                console.log('Partie "${partieID}" supprimée car plus aucuns joueurs dedans !')
+            }
+        }
+    });
 });
 
 // Démarrer le serveur
 httpServer.listen(port, () => {
-  console.log(`[server]: Server is running at http://localhost:${port}`);
+    console.log(`[server]: Server is running at http://localhost:${port}`);
 });
 
