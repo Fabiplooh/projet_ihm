@@ -23,6 +23,12 @@
         canvas.height = 600;
 
         const socket = io();
+        const keys = {
+            left: false,
+            right: false
+        };
+
+
 
         socket.on("connect", () => console.log("Socket.IO connecté", socket.id));
         socket.on("connect_error", (err) => console.error("Erreur connexion", err));
@@ -34,9 +40,33 @@
 
         // Actions clavier
         document.addEventListener("keydown", (e) => {
-            if (e.key === "ArrowLeft") socket.emit("action", "left");
-            if (e.key === "ArrowRight") socket.emit("action", "right");
-            if (e.key === " ") socket.emit("action", "jump");
+            if (e.repeat) return;
+
+            if (e.key === "ArrowLeft" && !keys.left) {
+                  keys.left = true;
+                  socket.emit("action", "left");
+            }
+
+            if (e.key === "ArrowRight" && !keys.right) {
+                keys.right = true;
+                socket.emit("action", "right");
+            }
+
+            if (e.key === " " || e.key === "ArrowUp") {
+                socket.emit("action", "jump");
+            }
+        });
+
+        document.addEventListener("keyup", (e) => {
+            if (e.key === "ArrowLeft") {
+                keys.left = false;
+                socket.emit("action", "stopLeft");
+            }
+
+            if (e.key === "ArrowRight") {
+                keys.right = false;
+                socket.emit("action", "stopRight");
+            }
         });
 
         let joueurs = {};

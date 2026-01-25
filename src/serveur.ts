@@ -39,6 +39,15 @@ interface Partie {
 }
 const parties = new Map<string, Partie>();
 
+
+const playerInputs = new Map<string, {
+  left: boolean;
+  right: boolean;
+  jump: boolean;
+}>();
+
+
+
 // Page partie
 app.get("/partie", (req: Request, res: Response) => {
     res.sendFile(path.join(__dirname,"..","public","partie.html"));
@@ -83,11 +92,39 @@ app.all("/add", (req: Request, res: Response) => {
   res.json({ result: sum });
 });
 
+
+function isOnGround(body: Matter.Body, bodies: Matter.Body[]) {
+    const footY = body.bounds.max.y;
+    const pointsX = [
+        body.position.x,
+        body.bounds.min.x + 3,
+        body.bounds.max.x - 3
+    ];
+
+    return bodies.some(b => {
+        if (b === body || !b.isStatic){
+            return false;
+        } 
+
+        return pointsX.some(x =>
+            x > b.bounds.min.x &&
+            x < b.bounds.max.x &&
+            Math.abs(b.bounds.min.y - footY) < 6
+        );
+    });
+}
+
+
+
+
+
 // Créer le serveur HTTP et Socket.IO
 const httpServer = createServer(app);
 const io = new Server(httpServer);
 
 // Socket.IO
+// On a creer un serveur http et on connecte les joueurs (client html) qui se connecte sur la page partie. Ils sont ensuite mis dans la partie
+// correspondant à leur demande et sont connecté via socket avec socket.io
 io.on("connection", (socket) => {
   console.log("Client connecté", socket.id);
 
@@ -112,7 +149,49 @@ io.on("connection", (socket) => {
       });
 
       // Boucle de simulation
-      const interval = setInterval(() => {
+        const interval = setInterval(() => {
+
+        const HORIZONTAL_SPEED = 6;
+        const STOP_MOUVEMENT = 0.8;
+
+        joueurs.forEach((body, socketId) => {
+            const input = playerInputs.get(socketId);
+            if (!input){
+                return;
+            } 
+
+            // Empêche la rotation (important pour un joueur)
+            Body.setInertia(body, Infinity);
+
+            let vx = body.velocity.x;
+
+            if (input.left) {
+                vx = -HORIZONTAL_SPEED;
+            } else if (input.right) {
+                vx = HORIZONTAL_SPEED;
+            } else {
+                vx *= STOP_MOUVEMENT; // arrêt fluide
+            }
+
+            
+            Body.setVelocity(body, {
+                x: vx,
+                y: body.velocity.y,
+            });
+
+
+            //  Jump
+            if (input.jump && isOnGround(body, engine.world.bodies)) {
+                Body.setVelocity(body, {
+                x: vx,
+                y: -8,
+                });
+            input.jump = false;
+            }
+        });
+
+
+
         Engine.update(engine, 16);
 
         // envoyer état à tous les clients de la partie
@@ -135,24 +214,20 @@ io.on("connection", (socket) => {
   });
 
   // Actions du joueur
-  socket.on("action", (action: string) => {
-    for (const [partieId, partie] of parties.entries()) {
-      if (partie.joueurs.has(socket.id)) {
-        const body = partie.joueurs.get(socket.id)!;
-        const speed = 5;
-        if (action === "left") Body.translate(body, { x: -speed, y: 0 });
-        if (action === "right") Body.translate(body, { x: speed, y: 0 });
-        if (action === "jump") {
-          // simple saut si sur le sol (y proche du sol)
-          partie.engine.world.bodies.forEach(b => {
-            if (b.isStatic && Math.abs(body.position.y + 20 - (b.position.y - b.bounds.max.y + b.position.y)) < 5) {
-              Body.setVelocity(body, { x: body.velocity.x, y: -5 });
-            }
-          });
-        }
-      }
+socket.on("action", (action: string) => {
+    if (!playerInputs.has(socket.id)) {
+        playerInputs.set(socket.id, { left: false, right: false, jump: false });
     }
-  });
+
+    const input = playerInputs.get(socket.id)!;
+
+    if (action === "left") input.left = true;
+    if (action === "right") input.right = true;
+    if (action === "stopLeft") input.left = false;
+    if (action === "stopRight") input.right = false;
+    if (action === "jump") input.jump = true;
+});
+
 
   socket.on("disconnecting", () => {
     console.log("Client déconnecté", socket.id);
