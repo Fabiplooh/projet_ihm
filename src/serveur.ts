@@ -49,8 +49,9 @@ const maps: Record<string, MapData> = {
         ]}
 };
 
-// clé : id socket, valeur : la couleur (string) 
+// clé : id socket, valeur : la couleur (string) pareil pour le pseudo 
 const playerColors = new Map<string, string>();
+const playerPseudos = new Map<string, string>();
 
 // Parties actives
 interface Partie {
@@ -117,7 +118,8 @@ app.all("/add", (req: Request, res: Response) => {
     res.json({ result: sum });
 });
 
-//Sert a détecter le sol pour éviter de sauter dans les airs et donc limité les double ou triple sauts
+//Sert a détecter le sol pour éviter de sauter dans les airs et donc limiter les double ou triple sauts
+//On pourrait rajouter le fait de sauter l'un sur l'autre en parcourant le dico de joueur
 function isOnGround(body: Matter.Body, bodies: Matter.Body[]) {
     const footY = body.bounds.max.y;
     const pointsX = [
@@ -154,8 +156,8 @@ io.on("connection", (socket) => {
     console.log("Client connecté", socket.id);
 
     // Rejoindre une partie et demander une map
-    socket.on("join", (data: { partieId: string; mapId: string, color : string}) => {
-        const { partieId, mapId, color } = data;
+    socket.on("join", (data: { partieId: string; mapId: string, color : string, pseudo : string}) => {
+        const { partieId, mapId, color, pseudo } = data;
         //Creer une "room" pour cette partie. On peut ensuite envoyer a tout ceux dedans facilement : "io.to(partieId).emit("state", etat);"
         socket.join(partieId);
 
@@ -218,13 +220,14 @@ io.on("connection", (socket) => {
                 Engine.update(engine, 16);
 
                 // envoyer état à tous les clients de la partie
-                const etat: Record<string, { x: number; y: number; angle: number, colorPlayer : string }> = {};
+                const etat: Record<string, { x: number; y: number; angle: number, colorPlayer : string, pseudoPlayer : string}> = {};
                 joueurs.forEach((body, id) => {
                     etat[id] = { 
                         x: body.position.x, 
                         y: body.position.y, 
                         angle: body.angle, 
-                        colorPlayer : playerColors.get(id) || "#2d7dff" // couleur par defaut si jamais 
+                        colorPlayer : playerColors.get(id) || "#2d7dff", // couleur par defaut si jamais 
+                        pseudoPlayer : playerPseudos.get(id) || "Joueur", //pseudo par defaut si jamais  
                     };
                 });
                 // Ici on envoie bien qu'au gens de la room partieID
@@ -239,8 +242,9 @@ io.on("connection", (socket) => {
             socket.emit("connection_not_first");
         }
 
-        //On ajoute la couleur du joueur qui vient de se connecter aux dico 
+        //On ajoute la couleur et le speudo du joueur qui vient de se connecter aux dico 
         playerColors.set(socket.id, color);
+        playerPseudos.set(socket.id, pseudo);
 
         // Ajouter le joueur a la partie :(dans tous les cas si on a une connection)
         const playerBody = Bodies.rectangle(400, 0, 40, 40);
@@ -281,6 +285,7 @@ io.on("connection", (socket) => {
                 //On supprime de tous nos dic
                 partie.joueurs.delete(socket.id);
                 playerColors.delete(socket.id);
+                playerPseudos.delete(socket.id);
                 playerInputs.delete(socket.id);
             }
 

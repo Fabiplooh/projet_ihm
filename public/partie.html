@@ -19,6 +19,7 @@
             <h2>Rejoindre une partie</h2>
 
             <input id="partieId" placeholder="Nom de la partie" />
+            
             <select id="mapSelect">
                 <option value="map1">Map 1</option>
                 <option value="map2">Map 2</option>
@@ -28,6 +29,8 @@
             <label for="colorPick">Couleur :</label>
             <input id="colorPick" type="color" value="#ff8800" />
             
+            <input id="playerPseudo" placeholder="Pseudo" />
+
             <button id="joinBtn">Rejoindre</button>
             
         </div>
@@ -50,6 +53,7 @@
         const partieInput = document.getElementById("partieId");
         const mapSelect = document.getElementById("mapSelect");
         const colorPick = document.getElementById("colorPick");
+        const pseudoInput = document.getElementById("playerPseudo");
         
         const socket = io();
 
@@ -98,12 +102,24 @@
             const mapId = mapSelect.value;
             //On envoie la couleur du joueur au serveur aussi pour avoir un affichage cohérent
             const playerColor = colorPick.value;
+            const pseudo = playerPseudo.value.trim();
 
             if (!partieId) {
                 alert("Entre un nom de partie");
                 return;
-            } 
-            socket.emit("join", { partieId, mapId, color : playerColor });
+            }
+
+            if (!pseudo) {
+                alert("Entre un pseudo !");
+                return;
+            }
+
+            socket.emit("join", { 
+                partieId, 
+                mapId, 
+                color : playerColor, 
+                pseudo
+            });
 
             menu.style.display = "none";
             canvas.style.display = "block";
@@ -157,8 +173,10 @@
                 ctx.rotate(p.angle);
                 ctx.fillStyle =  p.colorPlayer || "blue";
                 ctx.fillRect(-20, -20, 40, 40);
+
                 ctx.restore();
             }
+
 
             // dessiner les colliders
             ctx.fillStyle = "grey";
@@ -169,6 +187,26 @@
                     c.width,
                     c.height
                 );
+            }
+            
+            //je le mets pas dans la boucle des joueurs pour qu'on voit les pseudos quand on monte sur un, joueur, quand il y a un rectangle au dessus etc...
+            for (const id in joueurs) {
+                const p = joueurs[id];
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                // nom au-dessus
+                ctx.font = "14px Arial";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "bottom";
+
+                // contour : on ecrit le contour du pseudo  (strokeText) en noir en un peu plus gros pour le réecrire en blanc pas dessus pour mieux le voir 
+                ctx.lineWidth = 3;
+                ctx.strokeStyle = "black";
+                ctx.strokeText(p.pseudoPlayer || "", 0, -24); //-24 est juste au dessus du carré  
+
+                ctx.fillStyle = "white";
+                ctx.fillText(p.pseudoPlayer || "", 0, -24);
+                ctx.restore();
             }
 
             requestAnimationFrame(loop);
