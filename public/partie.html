@@ -10,22 +10,32 @@
         canvas { display: block; background: #333; }
     </style>
     -->
-    <link rel="stylesheet" href="game_style.css" />
+    <link rel="stylesheet" href="css/game_style.css" />
 
 </head>
 <body>
-    <div id="menu">
-        <h2>Rejoindre une partie</h2>
-        <input id="partieId" placeholder="Nom de la partie" />
-        <select id="mapSelect">
-            <option value="map1">Map 1</option>
-            <option value="map2">Map 2</option>
-        </select>
-        <button id="joinBtn">Rejoindre</button>
+    <div id="partie">
+        <div id="menu">
+            <h2>Rejoindre une partie</h2>
+
+            <input id="partieId" placeholder="Nom de la partie" />
+            <select id="mapSelect">
+                <option value="map1">Map 1</option>
+                <option value="map2">Map 2</option>
+            </select>
+            
+            <!-- Le for dans le label sert a faire en sorte que quand on appuit sur le texte "Couleur", ca relie au id colorPick et donc ouvre la boite de selection-->
+            <label for="colorPick">Couleur :</label>
+            <input id="colorPick" type="color" value="#ff8800" />
+            
+            <button id="joinBtn">Rejoindre</button>
+            
+        </div>
+        <canvas id="c" width="800" height="600"></canvas>
     </div>
+    
 
 
-    <canvas id="c"></canvas>
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const canvas = document.getElementById("c");
@@ -33,11 +43,14 @@
         canvas.width = 800;
         canvas.height = 600;
 
+        //canvas.style.display = "none";
+
         const menu = document.getElementById("menu");
         const joinBtn = document.getElementById("joinBtn");
         const partieInput = document.getElementById("partieId");
         const mapSelect = document.getElementById("mapSelect");
-
+        const colorPick = document.getElementById("colorPick");
+        
         const socket = io();
 
         const keys = {
@@ -47,10 +60,27 @@
 
         let joueurs = {};
         let colliders =[];
-        let joined =false; 
+        let joined =false;
+        let joinAlertsDone=false;
 
         socket.on("connect", () => console.log("Socket.IO connecté", socket.id));
         socket.on("connect_error", (err) => console.error("Erreur connexion", err));
+
+        socket.on("connection_first_on_server", () => {
+            if (joinAlertsDone){
+                return;
+            }
+            joinAlertsDone = true;
+            alert("Tu es le premier sur ce salon !");
+        });
+
+        socket.on("connection_not_first", () => {
+            if (joinAlertsDone){
+                return;
+            }
+            joinAlertsDone = true;
+            alert("Tu rejoins un salon déjà créer (ce ne sera peut être pas la même map que celle que tu as choisis)!");
+        });
 
         // Réception des colliders (map) - On attend activement que le serveur envoie
         socket.on("map", (data) => { 
@@ -66,12 +96,14 @@
         joinBtn.addEventListener("click", () => {
             const partieId = partieInput.value.trim();
             const mapId = mapSelect.value;
+            //On envoie la couleur du joueur au serveur aussi pour avoir un affichage cohérent
+            const playerColor = colorPick.value;
 
             if (!partieId) {
                 alert("Entre un nom de partie");
                 return;
             } 
-            socket.emit("join", { partieId, mapId });
+            socket.emit("join", { partieId, mapId, color : playerColor });
 
             menu.style.display = "none";
             canvas.style.display = "block";
@@ -123,7 +155,7 @@
                 ctx.save();
                 ctx.translate(p.x, p.y);
                 ctx.rotate(p.angle);
-                ctx.fillStyle = id === socket.id ? "orange" : "blue";
+                ctx.fillStyle =  p.colorPlayer || "blue";
                 ctx.fillRect(-20, -20, 40, 40);
                 ctx.restore();
             }

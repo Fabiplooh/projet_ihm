@@ -1,0 +1,34 @@
+body {
+  margin: 0;
+  background: #222;
+  display: flex;
+  justify-content: center;  /* centre horizontalement */
+  align-items: center;      /* centre verticalement */
+  height: 100vh;
+}
+
+
+#partie {
+  display: flex;
+  flex-direction: column; /*Pour que ce soit l'un au dessus de l'autre*/
+  align-items: center;
+  gap: 16px; /*ecart entre le texte et le jeu*/
+}
+
+#menu {
+  background: black;
+  color: white;
+  padding: 16px;
+  border-radius: 8px;
+}
+
+#menu h2 {
+  text-align: center;
+}
+
+#c {
+  background: #333;
+  border: 2px solid #fff;
+  border-radius: 8px;
+  display: block;
+}

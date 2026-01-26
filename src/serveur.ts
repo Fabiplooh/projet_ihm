@@ -49,6 +49,9 @@ const maps: Record<string, MapData> = {
         ]}
 };
 
+// clé : id socket, valeur : la couleur (string) 
+const playerColors = new Map<string, string>();
+
 // Parties actives
 interface Partie {
     engine: Matter.Engine;
@@ -151,14 +154,16 @@ io.on("connection", (socket) => {
     console.log("Client connecté", socket.id);
 
     // Rejoindre une partie et demander une map
-    socket.on("join", (data: { partieId: string; mapId: string }) => {
-        const { partieId, mapId } = data;
+    socket.on("join", (data: { partieId: string; mapId: string, color : string}) => {
+        const { partieId, mapId, color } = data;
         //Creer une "room" pour cette partie. On peut ensuite envoyer a tout ceux dedans facilement : "io.to(partieId).emit("state", etat);"
         socket.join(partieId);
+
 
         let partie = parties.get(partieId);
 
         if (!partie) {
+            socket.emit("connection_first_on_server");
             const mapData = maps[mapId];
             if (!mapData) return;
 
@@ -183,8 +188,6 @@ io.on("connection", (socket) => {
                         return;
                     } 
 
-                    // Empêche la rotation (important pour un joueur)
-                    Body.setInertia(body, Infinity);
 
                     let vx = body.velocity.x;
 
@@ -215,9 +218,14 @@ io.on("connection", (socket) => {
                 Engine.update(engine, 16);
 
                 // envoyer état à tous les clients de la partie
-                const etat: Record<string, { x: number; y: number; angle: number }> = {};
+                const etat: Record<string, { x: number; y: number; angle: number, colorPlayer : string }> = {};
                 joueurs.forEach((body, id) => {
-                    etat[id] = { x: body.position.x, y: body.position.y, angle: body.angle };
+                    etat[id] = { 
+                        x: body.position.x, 
+                        y: body.position.y, 
+                        angle: body.angle, 
+                        colorPlayer : playerColors.get(id) || "#2d7dff" // couleur par defaut si jamais 
+                    };
                 });
                 // Ici on envoie bien qu'au gens de la room partieID
                 io.to(partieId).emit("state", etat);
@@ -227,9 +235,17 @@ io.on("connection", (socket) => {
             partie = { engine, joueurs, interval, mapId };
             parties.set(partieId, partie);
         }
+        else {
+            socket.emit("connection_not_first");
+        }
+
+        //On ajoute la couleur du joueur qui vient de se connecter aux dico 
+        playerColors.set(socket.id, color);
 
         // Ajouter le joueur a la partie :(dans tous les cas si on a une connection)
         const playerBody = Bodies.rectangle(400, 0, 40, 40);
+        // Empêche la rotation (important pour un joueur)
+        Body.setInertia(playerBody, Infinity);
         partie.joueurs.set(socket.id, playerBody);
         World.add(partie.engine.world, [playerBody]);
     });
@@ -262,7 +278,10 @@ io.on("connection", (socket) => {
             const body = partie.joueurs.get(socket.id);
             if (body) {
                 World.remove(partie.engine.world, body);
+                //On supprime de tous nos dic
                 partie.joueurs.delete(socket.id);
+                playerColors.delete(socket.id);
+                playerInputs.delete(socket.id);
             }
 
             //Gestion du dico si il n'y a plus de joueurs dans le salon courant 
