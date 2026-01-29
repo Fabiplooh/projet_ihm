@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Test Login / Register</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    input, button { margin: 5px 0; display: block; }
+    .result { margin-top: 10px; color: green; }
+    .error { color: red; }
+  </style>
+</head>
+<body>
+  <h1>Test Login / Register</h1>
+
+  <h2>Register</h2>
+  <input type="text" id="regEmail" placeholder="Email">
+  <input type="password" id="regPassword" placeholder="Mot de passe">
+  <input type="text" id="regPseudo" placeholder="Pseudo">
+  <input type="color" id="regColor" value="#2d7dff">
+  <button id="btnRegister">S'inscrire</button>
+  <div id="regResult" class="result"></div>
+
+  <h2>Login</h2>
+  <input type="text" id="loginEmail" placeholder="Email">
+  <input type="password" id="loginPassword" placeholder="Mot de passe">
+  <button id="btnLogin">Se connecter</button>
+  <div id="loginResult" class="result"></div>
+
+  <h2>Profil</h2>
+  <button id="btnMe">Voir mon profil</button>
+  <div id="meResult" class="result"></div>
+
+  <h2>Logout</h2>
+  <button id="btnLogout">Se déconnecter</button>
+
+  <script>
+    const api = (url, data) =>
+      fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      }).then(r => r.json());
+
+    document.getElementById('btnRegister').onclick = async () => {
+      const email = document.getElementById('regEmail').value;
+      const password = document.getElementById('regPassword').value;
+      const pseudo = document.getElementById('regPseudo').value;
+      const color = document.getElementById('regColor').value;
+
+      const res = await api('/auth/register', { email, password, pseudo, color });
+      document.getElementById('regResult').textContent = JSON.stringify(res);
+      document.getElementById('regResult').className = res.ok ? 'result' : 'error';
+    };
+
+    document.getElementById('btnLogin').onclick = async () => {
+      const email = document.getElementById('loginEmail').value;
+      const password = document.getElementById('loginPassword').value;
+
+      const res = await api('/auth/login', { email, password });
+      document.getElementById('loginResult').textContent = JSON.stringify(res);
+      document.getElementById('loginResult').className = res.ok ? 'result' : 'error';
+    };
+
+    document.getElementById('btnMe').onclick = async () => {
+      const res = await fetch('/me').then(r => r.json());
+      document.getElementById('meResult').textContent = JSON.stringify(res);
+    };
+
+    document.getElementById('btnLogout').onclick = async () => {
+      const res = await api('/auth/logout', {});
+      alert(res.ok ? 'Déconnecté !' : 'Erreur');
+    };
+  </script>
+</body>
+</html>
+

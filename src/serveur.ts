@@ -1,14 +1,20 @@
-import express, { Express, Request, Response } from "express";
+import express, { Express, Request, Response, RequestHandler } from "express";
 import dotenv from "dotenv";
 import * as path from "path";
 import { createServer } from "http";
 import { Server } from "socket.io";
 import * as Matter from "matter-js";
+import session from "express-session";
+import bcrypt from "bcrypt";
+import { db } from "./db";
 
 dotenv.config();
 
 const app: Express = express();
 const port = process.env.PORT ?? 3000;
+
+// connect-sqlite3 n'a pas de types → require obligatoire
+const connectSqlite3 = require("connect-sqlite3");
 
 const { Engine, World, Bodies, Body } = Matter;
 
@@ -49,23 +55,26 @@ const maps: Record<string, MapData> = {
         ]}
 };
 
-// clé : id socket, valeur : la couleur (string) pareil pour le pseudo 
-const playerColors = new Map<string, string>();
-const playerPseudos = new Map<string, string>();
+const socketToUser = new Map<string, number>();
+
+
+// clé : userId, valeur : la couleur (string) pareil pour le pseudo 
+const playerColors = new Map<number, string>();
+const playerPseudos = new Map<number, string>();
 
 // Parties actives
 interface Partie {
     engine: Matter.Engine;
-    joueurs: Map<string, Matter.Body>;
+    joueurs: Map<number, Matter.Body>; //userID
     interval: NodeJS.Timer;
     mapId: string;
 }
 // On accède aux parties par un dico avec comme clé une "partieID" et l'interface Partie  
 const parties = new Map<string, Partie>();
 
-// Va nous permettre de stocker les inputs de chaques player. Ce sont donc des boolean stocker dans un dico avec comme clé le socket 
-// du joueur (qui est unique et creer a la connection). La clé string est la socket.id 
-const playerInputs = new Map<string, {
+// Va nous permettre de stocker les inputs de chaques player. Ce sont donc des boolean stocker dans un dico avec comme clé l'userId 
+// du joueur (qui est unique et creer a la connection). La clé string est la socket. 
+const playerInputs = new Map<number, {
     left: boolean;
     right: boolean;
     jump: boolean;
@@ -77,6 +86,10 @@ const playerInputs = new Map<string, {
 app.get("/partie", (req: Request, res: Response) => {
     res.sendFile(path.join(__dirname,"..","public","partie.html"));
     console.log(`[server]: Un client essaye de se connecter a partie`);
+});
+
+app.get("/test-login", (req: Request, res: Response) => {
+    res.sendFile(path.join(__dirname,"..","public","test-login.html"));
 });
 
 // Page d'accueil
@@ -118,6 +131,105 @@ app.all("/add", (req: Request, res: Response) => {
     res.json({ result: sum });
 });
 
+
+
+
+// Créer le serveur HTTP et Socket.IO
+const httpServer = createServer(app);
+const io = new Server(httpServer);
+
+//Connexion a la base de donnée
+const SQLiteStore = connectSqlite3(session);
+
+// On utilise une session, qui stock des infos comme userId (quand on fait req.session as any . userId = user.id)
+// C'est ensuite stocker dans le fichier sessions.sqlite et utilisé comme cookie par le navigateur. Ca permet d'eviter de 
+// devoir recreer tout a chaque refresh de page etc.. Il fait le travail de charger/sauvegarder aussi 
+const sessionMiddleware = session({
+    store: new SQLiteStore({ db: "sessions.sqlite" }),
+    secret: "secret_dev",
+    resave: false,
+    saveUninitialized: false,
+});
+
+app.use(sessionMiddleware);
+
+io.use((socket, next) => {
+    // @ts-ignore
+    sessionMiddleware(socket.request as any, {} as any, next as any);
+});
+
+
+
+//Pour le login : 
+// REGISTER - On ajoute à la base de donnée et on connecte puis message OK
+app.post("/auth/register", async (req, res) => {
+    const { email, password, pseudo, color } = req.body;
+
+    try {
+        //10 correspond aux nombre de fois qu'on a haché, plus c'est haché plus c'est secur mais plus c'est lent 
+        const hash = await bcrypt.hash(password, 10);
+
+        const info = db.prepare(`
+            INSERT INTO users (email, password_hash, pseudo, color)
+            VALUES (?, ?, ?, ?)
+        `).run(email, hash, pseudo, color);
+        //On connecte automatiquement l'utilisateur 
+        (req.session as any).userId = Number(info.lastInsertRowid);
+        //Renovie au client
+        res.json({ ok: true });
+    } catch (e) {
+        res.status(400).json({ ok: false, error: "register_failed" });
+    }
+});
+
+// LOGIN
+app.post("/auth/login", async (req, res) => {
+    const { email, password } = req.body;
+    //Recherche du gonze
+    const user = db.prepare(`
+        SELECT id, password_hash FROM users WHERE email = ?
+    `).get(email) as any;
+
+    if (!user) {
+        res.status(401).json({ ok: false });
+        return;
+    }
+
+    const ok = await bcrypt.compare(password, user.password_hash);
+    if (!ok) {
+        res.status(401).json({ ok: false });
+        return;
+    }
+
+    (req.session as any).userId = user.id;
+    res.json({ ok: true });
+
+});
+
+// ME (profil)
+app.post("/me", async (req, res) => {
+  if (!(req.session as any).userId) {
+    res.status(401).json({ ok: false });
+    return;
+  }
+
+  const user = db.prepare(`
+    SELECT email, pseudo, color FROM users WHERE id = ?
+  `).get((req.session as any).userId);
+
+  res.json({ ok: true, user });
+});
+
+// LOGOUT
+app.post("/auth/logout", (req, res) => {
+    (req.session as any).destroy(() => res.json({ ok: true }));
+});
+
+
+
+
+
+
 //Sert a détecter le sol pour éviter de sauter dans les airs et donc limiter les double ou triple sauts
 //On pourrait rajouter le fait de sauter l'un sur l'autre en parcourant le dico de joueur
 function isOnGround(body: Matter.Body, bodies: Matter.Body[]) {
@@ -145,9 +257,6 @@ function isOnGround(body: Matter.Body, bodies: Matter.Body[]) {
 
 
 
-// Créer le serveur HTTP et Socket.IO
-const httpServer = createServer(app);
-const io = new Server(httpServer);
 
 // Socket.IO
 // On a creer un serveur http et on connecte les joueurs (client html) qui se connecte sur la page partie. Ils sont ensuite mis dans la partie
@@ -156,8 +265,37 @@ io.on("connection", (socket) => {
     console.log("Client connecté", socket.id);
 
     // Rejoindre une partie et demander une map
-    socket.on("join", (data: { partieId: string; mapId: string, color : string, pseudo : string}) => {
-        const { partieId, mapId, color, pseudo } = data;
+    socket.on("join", (data: { partieId: string; mapId: string}) => {
+        const { partieId, mapId } = data;
+        
+        // récupérer userId depuis la session
+        // @ts-ignore
+        const userId = (socket.request as any).session.userId as number;
+        if (!userId) {
+            socket.emit("join_error", "not_logged_in");
+            console.log("Bug sur l'obtention du userId", socket.id);
+            return;
+        }
+        
+        socketToUser.set(socket.id, userId);
+
+        const user = db.prepare(`SELECT pseudo, color FROM users WHERE id = ?`).get(userId) as any;
+        if (!user) {
+            socket.emit("join_error", "not_logged_in");
+            console.log("Bug sur la recupération des donnés en bd", socket.id);
+            return;
+        }
+
+        // stocker profil pour le jeu
+        playerColors.set(userId, user.color);
+        playerPseudos.set(userId, user.pseudo);
+
+        playerInputs.set(userId, {
+            left: false,
+            right: false,
+            jump: false,
+        });
+        
         //Creer une "room" pour cette partie. On peut ensuite envoyer a tout ceux dedans facilement : "io.to(partieId).emit("state", etat);"
         socket.join(partieId);
 
@@ -167,10 +305,13 @@ io.on("connection", (socket) => {
         if (!partie) {
             socket.emit("connection_first_on_server");
             const mapData = maps[mapId];
-            if (!mapData) return;
+            if (!mapData){
+                console.log("Bug sur le chargement de la carte", socket.id);
+                return;
+            } 
 
             const engine = Engine.create();
-            const joueurs = new Map<string, Matter.Body>();
+            const joueurs = new Map<number, Matter.Body>();
 
             // Créer le sol
             mapData.colliders.forEach(g => {
@@ -183,9 +324,8 @@ io.on("connection", (socket) => {
         
                 const HORIZONTAL_SPEED = 6;
                 const STOP_MOUVEMENT = 0.8;
-
-                joueurs.forEach((body, socketId) => {
-                    const input = playerInputs.get(socketId);
+                joueurs.forEach((body, userId) => {
+                    const input = playerInputs.get(userId);
                     if (!input){
                         return;
                     } 
@@ -221,15 +361,16 @@ io.on("connection", (socket) => {
 
                 // envoyer état à tous les clients de la partie
                 const etat: Record<string, { x: number; y: number; angle: number, colorPlayer : string, pseudoPlayer : string}> = {};
-                joueurs.forEach((body, id) => {
-                    etat[id] = { 
+                joueurs.forEach((body, userId) => {
+                    etat[userId] = { 
                         x: body.position.x, 
                         y: body.position.y, 
                         angle: body.angle, 
-                        colorPlayer : playerColors.get(id) || "#2d7dff", // couleur par defaut si jamais 
-                        pseudoPlayer : playerPseudos.get(id) || "Joueur", //pseudo par defaut si jamais  
+                        colorPlayer : playerColors.get(userId) || "#2d7dff", // couleur par defaut si jamais 
+                        pseudoPlayer : playerPseudos.get(userId) || "Joueur", //pseudo par defaut si jamais  
                     };
                 });
+
                 // Ici on envoie bien qu'au gens de la room partieID
                 io.to(partieId).emit("state", etat);
                 io.to(partieId).emit("map", maps[mapId].colliders);
@@ -242,16 +383,14 @@ io.on("connection", (socket) => {
             socket.emit("connection_not_first");
         }
 
-        //On ajoute la couleur et le speudo du joueur qui vient de se connecter aux dico 
-        playerColors.set(socket.id, color);
-        playerPseudos.set(socket.id, pseudo);
 
         // Ajouter le joueur a la partie :(dans tous les cas si on a une connection)
         const playerBody = Bodies.rectangle(400, 0, 40, 40);
         // Empêche la rotation (important pour un joueur)
         Body.setInertia(playerBody, Infinity);
-        partie.joueurs.set(socket.id, playerBody);
+        partie.joueurs.set(userId, playerBody);
         World.add(partie.engine.world, [playerBody]);
+        socket.emit("join_success");
     });
 
 
@@ -259,13 +398,12 @@ io.on("connection", (socket) => {
     // Actions du joueur
     // On capte juste l'action et on change la valeur de la touche dans playerInputs 
     socket.on("action", (action: string) => {
-        if (!playerInputs.has(socket.id)) {
-            playerInputs.set(socket.id, { left: false, right: false, jump: false });
-        }
 
+        const userId = socketToUser.get(socket.id);
+        if (!userId) return;
 
-
-        const input = playerInputs.get(socket.id)!;
+        const input = playerInputs.get(userId)!;
+        if (!action) return;
 
         if (action === "left") input.left = true;
         if (action === "right") input.right = true;
@@ -278,15 +416,19 @@ io.on("connection", (socket) => {
     socket.on("disconnecting", () => {
         console.log("Client déconnecté", socket.id);
         
+        const userId = socketToUser.get(socket.id);
+        if(!userId) return;
+        socketToUser.delete(socket.id);
+
         for (const [partieId, partie] of parties.entries()) {
-            const body = partie.joueurs.get(socket.id);
+            const body = partie.joueurs.get(userId);
             if (body) {
                 World.remove(partie.engine.world, body);
                 //On supprime de tous nos dic
-                partie.joueurs.delete(socket.id);
-                playerColors.delete(socket.id);
-                playerPseudos.delete(socket.id);
-                playerInputs.delete(socket.id);
+                partie.joueurs.delete(userId);
+                playerColors.delete(userId);
+                playerPseudos.delete(userId);
+                playerInputs.delete(userId);
             }
 
             //Gestion du dico si il n'y a plus de joueurs dans le salon courant 

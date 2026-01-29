@@ -13,15 +13,22 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "bcrypt": "^6.0.0",
+    "better-sqlite3": "^12.6.2",
+    "connect-sqlite3": "^0.9.16",
     "dotenv": "^16.4.7",
     "express": "^4.22.1",
+    "express-session": "^1.19.0",
     "matter-js": "^0.20.0",
     "socket": "^1.1.59",
     "socket.io": "^4.8.3",
     "ws": "^8.19.0"
   },
   "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/express": "^5.0.0",
+    "@types/express-session": "^1.18.2",
     "@types/matter-js": "^0.20.2",
     "@types/node": "^22.10.10",
     "concurrently": "^9.1.2",

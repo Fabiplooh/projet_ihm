@@ -25,14 +25,30 @@
                 <option value="map2">Map 2</option>
             </select>
             
-            <!-- Le for dans le label sert a faire en sorte que quand on appuit sur le texte "Couleur", ca relie au id colorPick et donc ouvre la boite de selection-->
+            <!-- Le for dans le label sert a faire en sorte que quand on appuit sur le texte "Couleur", ca relie au id colorPick et donc ouvre la boite de selection
             <label for="colorPick">Couleur :</label>
             <input id="colorPick" type="color" value="#ff8800" />
             
             <input id="playerPseudo" placeholder="Pseudo" />
 
+
+            -->
+
             <button id="joinBtn">Rejoindre</button>
-            
+      
+            <button id="openLogin">Se connecter</button>
+            <button onclick="window.location='/test-login.html'">
+                Gérer mon compte
+            </button>
+
+            <div id="loginBox" style="display:none; margin-top:10px;">
+                <input id="loginEmail" placeholder="Email">
+                <input id="loginPassword" type="password" placeholder="Mot de passe">
+                <button id="doLogin">Valider</button>
+                <div id="loginMsg"></div>
+            </div>
+
+
         </div>
         <canvas id="c" width="800" height="600"></canvas>
     </div>
@@ -52,9 +68,53 @@
         const joinBtn = document.getElementById("joinBtn");
         const partieInput = document.getElementById("partieId");
         const mapSelect = document.getElementById("mapSelect");
-        const colorPick = document.getElementById("colorPick");
-        const pseudoInput = document.getElementById("playerPseudo");
-        
+        //const loginButton = document.getElementById("login")
+        //const colorPick = document.getElementById("colorPick");
+        //const pseudoInput = document.getElementById("playerPseudo");
+       
+        const openLogin = document.getElementById("openLogin");
+        const loginBox = document.getElementById("loginBox");
+        const doLogin = document.getElementById("doLogin");
+        const loginMsg = document.getElementById("loginMsg");
+
+        openLogin.onclick = () => {
+            loginBox.style.display = 
+                loginBox.style.display === "none" ? "block" : "none";
+        };
+
+        doLogin.onclick = async () => {
+            const email = document.getElementById("loginEmail").value;
+            const password = document.getElementById("loginPassword").value;
+
+            const res = await fetch("/auth/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, password })
+            });
+
+            const data = await res.json();
+
+            if (data.ok) {
+                loginMsg.textContent = "Connecté !";
+                loginMsg.style.color = "lime";
+                //Pour recuperer le vrai userId
+                socket.disconnect();
+                socket.connect();
+
+                //loginBox.style.display = "none";
+            } else {
+                loginMsg.textContent = "Identifiants invalides";
+                loginMsg.style.color = "red";
+            }
+        };
+
+
+
+
+
+
+
+
         const socket = io();
 
         const keys = {
@@ -86,25 +146,43 @@
             alert("Tu rejoins un salon déjà créer (ce ne sera peut être pas la même map que celle que tu as choisis)!");
         });
 
+        socket.on("join_error", (msg) => {
+            if (msg === "not_logged_in"){
+                alert("Non connecté. Va te login.");
+            }
+            else {
+                alert("Erreur join: " + msg);
+            }
+        });
+
         // Réception des colliders (map) - On attend activement que le serveur envoie
         socket.on("map", (data) => { 
             colliders = data; 
+            console.log("[CLIENT] Map reçue:", data);
         });
 
         // Réception état des joueurs
-        socket.on("state", (data) => { 
+        socket.on("state", (data) => {
+            console.log("[CLIENT] État reçu:", data); 
             joueurs = data;
         });
 
+        socket.on("join_success", () => {
+            console.log("[CLIENT] Join réussi !");
+            menu.style.display = "none";
+            canvas.style.display = "block";
+            joined = true;
+        });
+
         // Bouton rejoindre
-        joinBtn.addEventListener("click", () => {
+        joinBtn.addEventListener("click", async() => {
             const partieId = partieInput.value.trim();
             const mapId = mapSelect.value;
             //On envoie la couleur du joueur au serveur aussi pour avoir un affichage cohérent
-            const playerColor = colorPick.value;
-            const pseudo = playerPseudo.value.trim();
+            //const playerColor = colorPick.value;
+            //const pseudo = pseudoInput.value.trim();
 
-            if (!partieId) {
+            /*if (!partieId) {
                 alert("Entre un nom de partie");
                 return;
             }
@@ -112,21 +190,23 @@
             if (!pseudo) {
                 alert("Entre un pseudo !");
                 return;
-            }
+            }*/
 
             socket.emit("join", { 
                 partieId, 
                 mapId, 
-                color : playerColor, 
-                pseudo
+                //color : playerColor, 
+                //pseudo
             });
 
-            menu.style.display = "none";
-            canvas.style.display = "block";
-            joined = true;
+            //menu.style.display = "none";
+            //canvas.style.display = "block";
+            //joined = true;
         });
         
-
+        /*loginButton.addEventListener("click", async()=> {
+            
+        });*/
 
 
         // Actions clavier
@@ -162,6 +242,7 @@
 
         // Dessin
         function loop() {
+            console.log("[CLIENT] Loop appelée - joined:", joined);
             if (!joined) return requestAnimationFrame(loop);
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
