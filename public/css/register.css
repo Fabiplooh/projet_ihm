@@ -1,0 +1,99 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: #000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.container {
+    max-width: 500px;
+    width: 100%;
+}
+
+.section {
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 15px;
+}
+
+h2 {
+    color: #57e389;
+    margin-bottom: 15px;
+}
+
+input {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+    background: #2a2a2a;
+    border: 1px solid #444;
+    border-radius: 4px;
+    color: #fff;
+}
+
+input:focus {
+    outline: none;
+    border-color: #2d7dff;
+}
+
+input[type="color"] {
+    height: 40px;
+    cursor: pointer;
+}
+
+button {
+    width: 100%;
+    padding: 10px;
+    background: #2d7dff;
+    border: none;
+    border-radius: 4px;
+    color: #fff;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #1a5acc;
+}
+
+#btnLogout {
+    background: #ff4444;
+}
+
+#btnLogout:hover {
+    background: #cc0000;
+}
+
+#backBtn {
+    background: #57e389;
+}
+
+#backBtn:hover {
+    background: #33d17a;
+}
+
+.result {
+    margin-top: 10px;
+    padding: 10px;
+    background: #2a2a2a;
+    border-radius: 4px;
+    color: #57e389;
+    text-align: center;
+    display : none; /*On le cachge par défaut*/
+}
+
+.result.visible {
+    display: block;  /* Pour le rendre visible dans la classe result visible */
+}
+
+.error {
+    color: #ff6b6b;
+}

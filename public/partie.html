@@ -4,14 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Partie</title>
-    <!--
-    <style>
-        body { margin: 0; overflow: hidden; background: #222; }
-        canvas { display: block; background: #333; }
-    </style>
-    -->
     <link rel="stylesheet" href="css/game_style.css" />
-
 </head>
 <body>
     <div id="partie">
@@ -29,26 +22,24 @@
             <label for="colorPick">Couleur :</label>
             <input id="colorPick" type="color" value="#ff8800" />
             
-            <input id="playerPseudo" placeholder="Pseudo" />
-
-
-            -->
+            <input id="playerPseudo" placeholder="Pseudo" />            -->
 
             <button id="joinBtn">Rejoindre</button>
       
             <button id="openLogin">Se connecter</button>
-            <button onclick="window.location='/test-login.html'">
-                Gérer mon compte
-            </button>
+            
+            <!-- Autre facon de se déplacer avec le href, c'est plus classique et html friendly x)
+            <a href="/test-login.html" class="button">Gérer mon compte</a>
+            -->
+            
+            <button id="manageBtn">Gérer mon compte</button> 
 
             <div id="loginBox" style="display:none; margin-top:10px;">
-                <input id="loginEmail" placeholder="Email">
+                <input id="loginIdentifiant" placeholder="identifiant">
                 <input id="loginPassword" type="password" placeholder="Mot de passe">
                 <button id="doLogin">Valider</button>
                 <div id="loginMsg"></div>
             </div>
-
-
         </div>
         <canvas id="c" width="800" height="600"></canvas>
     </div>
@@ -62,12 +53,11 @@
         canvas.width = 800;
         canvas.height = 600;
 
-        //canvas.style.display = "none";
-
         const menu = document.getElementById("menu");
         const joinBtn = document.getElementById("joinBtn");
         const partieInput = document.getElementById("partieId");
         const mapSelect = document.getElementById("mapSelect");
+        const manageBtn = document.getElementById("manageBtn");
         //const loginButton = document.getElementById("login")
         //const colorPick = document.getElementById("colorPick");
         //const pseudoInput = document.getElementById("playerPseudo");
@@ -83,13 +73,13 @@
         };
 
         doLogin.onclick = async () => {
-            const email = document.getElementById("loginEmail").value;
+            const identifiant = document.getElementById("loginIdentifiant").value;
             const password = document.getElementById("loginPassword").value;
 
             const res = await fetch("/auth/login", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, password })
+                body: JSON.stringify({ identifiant, password })
             });
 
             const data = await res.json();
@@ -107,13 +97,10 @@
                 loginMsg.style.color = "red";
             }
         };
-
-
-
-
-
-
-
+        
+        manageBtn.addEventListener("click", () => {
+            window.location.href = "/test-login.html";
+        });
 
         const socket = io();
 
@@ -182,10 +169,10 @@
             //const playerColor = colorPick.value;
             //const pseudo = pseudoInput.value.trim();
 
-            /*if (!partieId) {
+            if (!partieId) {
                 alert("Entre un nom de partie");
                 return;
-            }
+            }/*
 
             if (!pseudo) {
                 alert("Entre un pseudo !");

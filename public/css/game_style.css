@@ -26,6 +26,11 @@ body {
   text-align: center;
 }
 
+#register {
+    align-items : center;
+    flex-direction: column;
+}
+
 #c {
   background: #333;
   border: 2px solid #fff;

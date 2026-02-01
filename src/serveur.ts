@@ -163,66 +163,77 @@ io.use((socket, next) => {
 //Pour le login : 
 // REGISTER - On ajoute à la base de donnée et on connecte puis message OK
 app.post("/auth/register", async (req, res) => {
-    const { email, password, pseudo, color } = req.body;
+    const { identifiant, password, pseudo, color } = req.body;
 
+    if (!identifiant || !password || !pseudo){
+        res.status(400).json({ok: false, message : "Il manque des champs."});
+        return;
+    }
+    
     try {
         //10 correspond aux nombre de fois qu'on a haché, plus c'est haché plus c'est secur mais plus c'est lent 
         const hash = await bcrypt.hash(password, 10);
 
         const info = db.prepare(`
-            INSERT INTO users (email, password_hash, pseudo, color)
+            INSERT INTO users (identifiant, password_hash, pseudo, color)
             VALUES (?, ?, ?, ?)
-        `).run(email, hash, pseudo, color);
+        `).run(identifiant, hash, pseudo, color);
         //On connecte automatiquement l'utilisateur 
         (req.session as any).userId = Number(info.lastInsertRowid);
         //Renovie au client
-        res.json({ ok: true });
+        res.json({ ok: true, message : "Vous avez bien crée votre compte et vous êtes maintenant connecté." });
     } catch (e) {
-        res.status(400).json({ ok: false, error: "register_failed" });
+        res.status(400).json({ ok: false, message : "Il y a eu une erreur." });
     }
 });
 
 // LOGIN
 app.post("/auth/login", async (req, res) => {
-    const { email, password } = req.body;
+    const { identifiant, password } = req.body;
+    
+    if (!identifiant || !password){
+        res.status(400).json({ok: false, message : "Il manque des champs."});
+        return;
+    }
+
     //Recherche du gonze
     const user = db.prepare(`
-        SELECT id, password_hash FROM users WHERE email = ?
-    `).get(email) as any;
+        SELECT id, password_hash FROM users WHERE identifiant = ?
+    `).get(identifiant) as any;
 
     if (!user) {
-        res.status(401).json({ ok: false });
+        res.status(401).json({ ok: false, message : "Le compte n'existe pas."});
         return;
     }
 
     const ok = await bcrypt.compare(password, user.password_hash);
     if (!ok) {
-        res.status(401).json({ ok: false });
+        res.status(401).json({ ok: false, message : "Mauvais mot de passe."});
         return;
     }
 
     (req.session as any).userId = user.id;
-    res.json({ ok: true });
+    res.json({ ok: true, message : "Vous êtes bien connecté."});
 
 });
 
 // ME (profil)
 app.post("/me", async (req, res) => {
-  if (!(req.session as any).userId) {
-    res.status(401).json({ ok: false });
-    return;
-  }
+    if (!(req.session as any).userId) {
+        res.status(401).json({ ok: false, message : "Vous n'êtes pas connecté."});
+        return;
+    }
 
-  const user = db.prepare(`
-    SELECT email, pseudo, color FROM users WHERE id = ?
-  `).get((req.session as any).userId);
+    const user = db.prepare(`
+        SELECT identifiant, pseudo, color FROM users WHERE id = ?
+    `).get((req.session as any).userId) as any;
 
-  res.json({ ok: true, user });
+    res.json({ ok: true, user, message : `Pseudo = ${user.pseudo}; Identifiant = ${user.identifiant}` });
 });
 
 // LOGOUT
 app.post("/auth/logout", (req, res) => {
-    (req.session as any).destroy(() => res.json({ ok: true }));
+    (req.session as any).destroy(() => res.json({ ok: true, message : "Vous êtes déconnecté." }));
 });
 
 
