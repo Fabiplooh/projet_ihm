@@ -5,8 +5,15 @@ import { createServer } from "http";
 import { Server } from "socket.io";
 import * as Matter from "matter-js";
 import session from "express-session";
+import { Session } from "express-session"
 import bcrypt from "bcrypt";
 import { db } from "./db";
+
+declare module "express-session" {
+    interface SessionData {
+        userId?: number;
+    }
+}
 
 dotenv.config();
 
@@ -155,7 +162,7 @@ app.use(sessionMiddleware);
 
 io.use((socket, next) => {
     // @ts-ignore
-    sessionMiddleware(socket.request as any, {} as any, next as any);
+    sessionMiddleware(socket.request, {}, next);
 });
 
 
@@ -179,8 +186,8 @@ app.post("/auth/register", async (req, res) => {
             VALUES (?, ?, ?, ?)
         `).run(identifiant, hash, pseudo, color);
         //On connecte automatiquement l'utilisateur 
-        (req.session as any).userId = Number(info.lastInsertRowid);
-        //Renovie au client
+        req.session.userId = Number(info.lastInsertRowid);
+        //Renvoie au client
         res.json({ ok: true, message : "Vous avez bien crée votre compte et vous êtes maintenant connecté." });
     } catch (e) {
         res.status(400).json({ ok: false, message : "Il y a eu une erreur." });
@@ -212,28 +219,28 @@ app.post("/auth/login", async (req, res) => {
         return;
     }
 
-    (req.session as any).userId = user.id;
+    req.session.userId = user.id;
     res.json({ ok: true, message : "Vous êtes bien connecté."});
 
 });
 
 // ME (profil)
 app.post("/me", async (req, res) => {
-    if (!(req.session as any).userId) {
+    if (!req.session.userId) {
         res.status(401).json({ ok: false, message : "Vous n'êtes pas connecté."});
         return;
     }
 
     const user = db.prepare(`
         SELECT identifiant, pseudo, color FROM users WHERE id = ?
-    `).get((req.session as any).userId) as any;
+    `).get(req.session.userId) as any;
 
     res.json({ ok: true, user, message : `Pseudo = ${user.pseudo}; Identifiant = ${user.identifiant}` });
 });
 
 // LOGOUT
 app.post("/auth/logout", (req, res) => {
-    (req.session as any).destroy(() => res.json({ ok: true, message : "Vous êtes déconnecté." }));
+    req.session.destroy(() => res.json({ ok: true, message : "Vous êtes déconnecté." }));
 });
 
 
