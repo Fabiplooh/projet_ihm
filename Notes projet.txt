@@ -1,0 +1,45 @@
+/*********************/
+/** ATTENDUS PROJET **/
+/*********************/
+
+Technique :
+    - Client-serveur
+    - Avoir plusieurs ressources
+    - Requêtes http (GET, POST)
+    - Passage de valeurs par requête
+    - Système d'authentification avec Oauth2
+    - Web socket
+
+Fonctionnalités générales :
+    - Système de gestion de partie
+    - Rôles différents (= par exemple participant vs. Spectateur)
+    - Un mode admin qui permet de voir toutes les parties en cours.
+
+Fonctionnalités du jeu (Bonus):
+    - A définir
+    - Un / plusieurs joueur IA
+
+
+/*************/
+/** RAPPORT **/
+/*************/
+
+⇒ Faire une description du protocole
+⇒ Description de comment fonctionnement le changement de protocole en HTTP (101)
+⇒ Explication de la transition http ⇒ websocket
+⇒ Echange serveur / client
+⇒ Utilisation des types de requetes HTTP (get, post) ⇒ expliquer
+
+
+/***************/
+/** TODO List **/
+/***************/
+
+    - javascript → typescript
+    - Avoir au moins un GET (appel à /me)
+    - Authentification avec Oauth2
+    - Avoir d’autres ressources ?
+    - Connexion à distance
+    - Jeu : rôles différents (1er au classement, admin)
+
+
