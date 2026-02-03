@@ -5,7 +5,7 @@ import { createServer } from "http";
 import { Server } from "socket.io";
 import * as Matter from "matter-js";
 import session from "express-session";
-import { Session } from "express-session"
+import { Session } from "express-session"
 import bcrypt from "bcrypt";
 import { db } from "./db";
 
@@ -18,7 +18,7 @@ declare module "express-session" {
 dotenv.config();
 
 const app: Express = express();
-const port = process.env.PORT ?? 3000;
+const port = Number(process.env.PORT) || 3000;
 
 // connect-sqlite3 n'a pas de types → require obligatoire
 const connectSqlite3 = require("connect-sqlite3");
@@ -40,6 +40,7 @@ interface RectCollider {
 interface MapData {
     name: string;
     colliders : RectCollider[];
+    exit : RectCollider;
 }
 
 const maps: Record<string, MapData> = {
@@ -51,19 +52,23 @@ const maps: Record<string, MapData> = {
             //plateforme
             { x: 400, y: 400, width: 200, height: 20 },
             { x: 250, y: 470, width: 200, height: 20 },
-        ]},
+        ],
+        exit: { x: 700, y: 350, width: 50, height: 50 } 
+    },
     "map2": { 
         name: "Map escalier", 
         colliders : [
             { x: 400, y: 580, width: 800, height: 40 },
             { x: 250, y: 500, width: 200, height: 20 },
             { x: 150, y: 420, width: 160, height: 20 },
-            { x: 300, y: 340, width: 120, height: 20 },  
-        ]}
+            { x: 300, y: 340, width: 120, height: 20 },
+        ],
+        exit: { x: 350, y: 290, width: 50, height: 50 }
+    }
 };
 
 const socketToUser = new Map<string, number>();
-
+const userToSocket = new Map<number, string>();
 
 // clé : userId, valeur : la couleur (string) pareil pour le pseudo 
 const playerColors = new Map<number, string>();
@@ -76,7 +81,7 @@ interface Partie {
     interval: NodeJS.Timer;
     mapId: string;
 }
-// On accède aux parties par un dico avec comme clé une "partieID" et l'interface Partie  
+// On accède aux parties par un dico avec comme clé une "partieID" et l'interface Partie
 const parties = new Map<string, Partie>();
 
 // Va nous permettre de stocker les inputs de chaques player. Ce sont donc des boolean stocker dans un dico avec comme clé l'userId 
@@ -121,7 +126,7 @@ app.get("/roulette.css", (req : Request, res : Response) => {
               body {
                   background-color: ${randomColor};
                   color : white;
-              }  
+              }
              `
     )
 });
@@ -172,11 +177,11 @@ io.use((socket, next) => {
 app.post("/auth/register", async (req, res) => {
     const { identifiant, password, pseudo, color } = req.body;
 
-    if (!identifiant || !password || !pseudo){
+    if (!identifiant || !password || !pseudo){
         res.status(400).json({ok: false, message : "Il manque des champs."});
         return;
     }
-    
+  
     try {
         //10 correspond aux nombre de fois qu'on a haché, plus c'est haché plus c'est secur mais plus c'est lent 
         const hash = await bcrypt.hash(password, 10);
@@ -187,7 +192,7 @@ app.post("/auth/register", async (req, res) => {
         `).run(identifiant, hash, pseudo, color);
         //On connecte automatiquement l'utilisateur 
         req.session.userId = Number(info.lastInsertRowid);
-        //Renvoie au client
+        //Renovie au client
         res.json({ ok: true, message : "Vous avez bien crée votre compte et vous êtes maintenant connecté." });
     } catch (e) {
         res.status(400).json({ ok: false, message : "Il y a eu une erreur." });
@@ -197,7 +202,7 @@ app.post("/auth/register", async (req, res) => {
 // LOGIN
 app.post("/auth/login", async (req, res) => {
     const { identifiant, password } = req.body;
-    
+  
     if (!identifiant || !password){
         res.status(400).json({ok: false, message : "Il manque des champs."});
         return;
@@ -250,27 +255,54 @@ app.post("/auth/logout", (req, res) => {
 
 //Sert a détecter le sol pour éviter de sauter dans les airs et donc limiter les double ou triple sauts
 //On pourrait rajouter le fait de sauter l'un sur l'autre en parcourant le dico de joueur
-function isOnGround(body: Matter.Body, bodies: Matter.Body[]) {
+function isOnGround(body: Matter.Body, bodies: Matter.Body[], joueurs : Map<number, Matter.Body>) {
     const footY = body.bounds.max.y;
-    const pointsX = [
+    const pointsX = [ //Les trois points qu'on teste : gauche milieu et droite !
         body.position.x,
         body.bounds.min.x + 3,
         body.bounds.max.x - 3
     ];
-
-    return bodies.some(b => {
+    //parcourt de tout les body
+    const onStaticBody = bodies.some(b => {
         if (b === body || !b.isStatic){
-            return false;
+            return false; //on continue de chercher
         } 
-
-        return pointsX.some(x =>
+        //C'est magique le .some, des qu'on a trouvé la condition, ca return sinon ca continue
+        // donc si la condition en bas est true, on a trouvé un rectangle statique en dessous de nous donc on renvoie ture
+        return pointsX.some(x => 
             x > b.bounds.min.x &&
             x < b.bounds.max.x &&
             Math.abs(b.bounds.min.y - footY) < 6
         );
     });
+    //Si deja au sol
+    if (onStaticBody) return true;
+
+    //collision avec les autres joueurs 
+    const onOtherPlayer = Array.from(joueurs.values()).some(otherBody => { //meme principe mais avec les joueurs 
+        if (otherBody === body) return false;
+
+        return pointsX.some(x =>
+            x > otherBody.bounds.min.x &&
+            x < otherBody.bounds.max.x &&
+            Math.abs(otherBody.bounds.min.y - footY) < 6
+        );
+    });
+
+    return onOtherPlayer;
 }
 
+function checkPlayerReachedExit(body: Matter.Body, userId : number, exitBody : Matter.Body) : boolean{
+    const collision = Matter.Collision.collides(body, exitBody);
+    if (! collision ) return false;
+ 
+    const socketId = userToSocket.get(userId);
+  
+    if (socketId) {
+        io.to(socketId).emit("player_exit");
+    }
+    return true;
+}
 
 
 
@@ -285,17 +317,18 @@ io.on("connection", (socket) => {
     // Rejoindre une partie et demander une map
     socket.on("join", (data: { partieId: string; mapId: string}) => {
         const { partieId, mapId } = data;
-        
+      
         // récupérer userId depuis la session
         // @ts-ignore
-        const userId = (socket.request as any).session.userId as number;
+        const userId = socket.request.session.userId as number;
         if (!userId) {
             socket.emit("join_error", "not_logged_in");
             console.log("Bug sur l'obtention du userId", socket.id);
             return;
         }
-        
+      
         socketToUser.set(socket.id, userId);
+        userToSocket.set(userId, socket.id);
 
         const user = db.prepare(`SELECT pseudo, color FROM users WHERE id = ?`).get(userId) as any;
         if (!user) {
@@ -313,7 +346,7 @@ io.on("connection", (socket) => {
             right: false,
             jump: false,
         });
-        
+      
         //Creer une "room" pour cette partie. On peut ensuite envoyer a tout ceux dedans facilement : "io.to(partieId).emit("state", etat);"
         socket.join(partieId);
 
@@ -336,18 +369,52 @@ io.on("connection", (socket) => {
                 const ground = Bodies.rectangle(g.x, g.y, g.width, g.height, { isStatic: true });
                 World.add(engine.world, [ground]);
             });
+          
+            //creer le bord de map
+            const CANVAS_WIDTH = 800;
+            const CANVAS_HEIGHT = 600;
+            const WALL_THICKNESS = 20;
 
+            const walls = [
+                // Mur gauche
+                Bodies.rectangle(0, CANVAS_HEIGHT / 2, WALL_THICKNESS, CANVAS_HEIGHT, { isStatic: true }),
+                // Mur droit
+                Bodies.rectangle(CANVAS_WIDTH, CANVAS_HEIGHT / 2, WALL_THICKNESS, CANVAS_HEIGHT, { isStatic: true }),
+                // Plafond
+                Bodies.rectangle(CANVAS_WIDTH / 2, 0, CANVAS_WIDTH, WALL_THICKNESS, { isStatic: true })
+            ];
+            World.add(engine.world, walls);
+
+            const exitBody = Bodies.rectangle(
+                mapData.exit.x,
+                mapData.exit.y,
+                mapData.exit.width,
+                mapData.exit.height,
+                {
+                    isStatic: true,
+                    isSensor : true, //pas de collision
+                }
+            )
+            World.add(engine.world, [exitBody])
+          
             //On met a jour l'etat du monde : la vitesse du joueur en fonction de son input (donc de la Hashmap PlayerInput)
             const interval = setInterval(() => {
-        
+      
                 const HORIZONTAL_SPEED = 6;
                 const STOP_MOUVEMENT = 0.8;
+
+                const playerFinish: number[] = [];
+
                 joueurs.forEach((body, userId) => {
                     const input = playerInputs.get(userId);
                     if (!input){
                         return;
                     } 
 
+                    if (checkPlayerReachedExit(body, userId, exitBody)){
+                        playerFinish.push(userId);
+                        return;
+                    }               
 
                     let vx = body.velocity.x;
 
@@ -359,7 +426,7 @@ io.on("connection", (socket) => {
                         vx *= STOP_MOUVEMENT; // arrêt fluide
                     }
 
-                
+              
                     Body.setVelocity(body, {
                         x: vx,
                         y: body.velocity.y,
@@ -367,7 +434,7 @@ io.on("connection", (socket) => {
 
 
                     //  Jump
-                    if (input.jump && isOnGround(body, engine.world.bodies)) {
+                    if (input.jump && isOnGround(body, engine.world.bodies, joueurs)) {
                         Body.setVelocity(body, {
                         x: vx,
                         y: -8,
@@ -375,6 +442,16 @@ io.on("connection", (socket) => {
                     input.jump = false;
                     }
                 });
+
+                playerFinish.forEach( userId => {
+                    const body = joueurs.get(userId);
+                    if (body) {
+                        World.remove(engine.world, body);
+                        joueurs.delete(userId);
+                        playerInputs.delete(userId);
+                    }
+                });
+                
                 Engine.update(engine, 16);
 
                 // envoyer état à tous les clients de la partie
@@ -385,13 +462,13 @@ io.on("connection", (socket) => {
                         y: body.position.y, 
                         angle: body.angle, 
                         colorPlayer : playerColors.get(userId) || "#2d7dff", // couleur par defaut si jamais 
-                        pseudoPlayer : playerPseudos.get(userId) || "Joueur", //pseudo par defaut si jamais  
+                        pseudoPlayer : playerPseudos.get(userId) || "Joueur", //pseudo par defaut si jamais
                     };
                 });
 
                 // Ici on envoie bien qu'au gens de la room partieID
                 io.to(partieId).emit("state", etat);
-                io.to(partieId).emit("map", maps[mapId].colliders);
+                io.to(partieId).emit("map", {colliders : mapData.colliders, exit : mapData.exit});
             }, 16);
 
             partie = { engine, joueurs, interval, mapId };
@@ -423,6 +500,8 @@ io.on("connection", (socket) => {
         const input = playerInputs.get(userId)!;
         if (!action) return;
 
+        if(!input) return;
+
         if (action === "left") input.left = true;
         if (action === "right") input.right = true;
         if (action === "stopLeft") input.left = false;
@@ -433,11 +512,11 @@ io.on("connection", (socket) => {
 
     socket.on("disconnecting", () => {
         console.log("Client déconnecté", socket.id);
-        
+      
         const userId = socketToUser.get(socket.id);
         if(!userId) return;
         socketToUser.delete(socket.id);
-
+        userToSocket.delete(userId);
         for (const [partieId, partie] of parties.entries()) {
             const body = partie.joueurs.get(userId);
             if (body) {
@@ -460,8 +539,11 @@ io.on("connection", (socket) => {
     });
 });
 
-// Démarrer le serveur
-httpServer.listen(port, () => {
+// Démarrer le serveur - connaitre ip : hostname -I
+/*httpServer.listen(port, () => {
     console.log(`[server]: Server is running at http://localhost:${port}`);
+});*/
+httpServer.listen(port, '0.0.0.0', () => {
+    console.log(`[server]: Server is running at http://0.0.0.0:${port}`);
+    console.log(`[server]: Accessible sur le réseau local à http://192.168.1.7:${port}`);
 });
-
