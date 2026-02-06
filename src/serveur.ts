@@ -90,6 +90,7 @@ const playerInputs = new Map<number, {
     left: boolean;
     right: boolean;
     jump: boolean;
+    ah: boolean;
 }>
 
 
@@ -345,6 +346,7 @@ io.on("connection", (socket) => {
             left: false,
             right: false,
             jump: false,
+            ah: false,
         });
       
         //Creer une "room" pour cette partie. On peut ensuite envoyer a tout ceux dedans facilement : "io.to(partieId).emit("state", etat);"
@@ -441,6 +443,44 @@ io.on("connection", (socket) => {
                         });
                     input.jump = false;
                     }
+
+                    if(input.ah){
+                        const PUSH_RADIUS = 100; // Rayon de la poussée
+                        const PUSH_FORCE = 0.3; // Force de la poussée (ajuste selon tes besoins)
+                        
+                        const partieCourante = parties.get(partieId); 
+                        if (!partieCourante) return;
+                        
+                        const pusherBody = partieCourante.joueurs.get(userId);
+                        if (pusherBody){
+                            // Parcourir tous les autres joueurs de la partie
+                            partieCourante.joueurs.forEach((otherBody, otherUserId) => {
+                                if (otherUserId === userId) return; // Ne pas se pousser soi-même
+                                
+                                // Calculer la distance entre les deux joueurs
+                                const dx = otherBody.position.x - pusherBody.position.x;
+                                const dy = otherBody.position.y - pusherBody.position.y;
+                                const distance = Math.sqrt(dx * dx + dy * dy);
+                                
+                                // Si le joueur est dans le rayon de poussée
+                                if (distance < PUSH_RADIUS && distance > 0) {
+                                    // Normaliser le vecteur de direction
+                                    const dirX = dx / distance;
+                                    const dirY = dy / distance;
+                                    
+                                    // Appliquer une force proportionnelle à la distance (plus proche = plus fort)
+                                    const forceMagnitude = PUSH_FORCE * (1 - distance / PUSH_RADIUS);
+                                    
+                                    Body.applyForce(otherBody, otherBody.position, {
+                                        x: dirX * forceMagnitude,
+                                        y: dirY * forceMagnitude
+                                    });
+                                }
+                            });
+                        }
+
+                        input.ah = false;
+                    }
                 });
 
                 playerFinish.forEach( userId => {
@@ -451,9 +491,30 @@ io.on("connection", (socket) => {
                         playerInputs.delete(userId);
                     }
                 });
-                
-                Engine.update(engine, 16);
+               
+                //console.log("nombre de joueurs : ", joueurs.size);
+                if(playerFinish.length > 0 && joueurs.size === 0){
+                    const partieCourante = parties.get(partieId); 
+                    if (!partieCourante) return;
+                    console.log("Tous les joueurs ont fini ! Rechargement des joueurs sur la partie :", partieId);
 
+                    
+                    playerFinish.forEach(userId => {
+                        //J'ai rajouter ça pour ramettre uniquement ceux qui sont encore connecté. 
+                        const socketId = userToSocket.get(userId);
+                        if (!socketId) return;
+
+                        const playerBody = Bodies.rectangle(400, 0, 40, 40);
+                        Body.setInertia(playerBody, Infinity);
+                        partieCourante.joueurs.set(userId, playerBody);
+                        World.add(partieCourante.engine.world, [playerBody]);
+                        // Remettre les inputs à zéro
+                        playerInputs.set(userId, { left: false, right: false, jump: false, ah: false});
+                    });
+                }
+
+                Engine.update(engine, 16);
+                
                 // envoyer état à tous les clients de la partie
                 const etat: Record<string, { x: number; y: number; angle: number, colorPlayer : string, pseudoPlayer : string}> = {};
                 joueurs.forEach((body, userId) => {
@@ -507,6 +568,7 @@ io.on("connection", (socket) => {
         if (action === "stopLeft") input.left = false;
         if (action === "stopRight") input.right = false;
         if (action === "jump") input.jump = true;
+        if (action ==="ah") input.ah = true;
     });
 
 

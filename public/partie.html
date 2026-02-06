@@ -169,7 +169,7 @@
         });
 
         socket.on("player_exit", () => {
-            alert("Vous avez atteint la sortie !");
+            //alert("Vous avez atteint la sortie !");
         });
 
         // Bouton rejoindre
@@ -203,8 +203,11 @@
                 socket.emit("action", "right");
             }
 
-            if (e.key === " " || e.key === "ArrowUp") {
+            if (e.key === "ArrowUp") {
                 socket.emit("action", "jump");
+            }
+            if (e.key === " "){
+                socket.emit("action", "ah")
             }
         });
 
