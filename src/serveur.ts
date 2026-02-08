@@ -398,6 +398,7 @@ io.on("connection", (socket) => {
                 }
             )
             World.add(engine.world, [exitBody])
+            const finishedPlayers = new Set<number>();
           
             //On met a jour l'etat du monde : la vitesse du joueur en fonction de son input (donc de la Hashmap PlayerInput)
             const interval = setInterval(() => {
@@ -405,7 +406,6 @@ io.on("connection", (socket) => {
                 const HORIZONTAL_SPEED = 6;
                 const STOP_MOUVEMENT = 0.8;
 
-                const playerFinish: number[] = [];
 
                 joueurs.forEach((body, userId) => {
                     const input = playerInputs.get(userId);
@@ -414,7 +414,11 @@ io.on("connection", (socket) => {
                     } 
 
                     if (checkPlayerReachedExit(body, userId, exitBody)){
-                        playerFinish.push(userId);
+                        finishedPlayers.add(userId);
+                        World.remove(engine.world, body);
+                        joueurs.delete(userId);
+                        playerInputs.delete(userId);
+
                         return;
                     }               
 
@@ -482,7 +486,7 @@ io.on("connection", (socket) => {
                         input.ah = false;
                     }
                 });
-
+/*
                 playerFinish.forEach( userId => {
                     const body = joueurs.get(userId);
                     if (body) {
@@ -491,15 +495,15 @@ io.on("connection", (socket) => {
                         playerInputs.delete(userId);
                     }
                 });
-               
+  */             
                 //console.log("nombre de joueurs : ", joueurs.size);
-                if(playerFinish.length > 0 && joueurs.size === 0){
+                if(joueurs.size === 0 && finishedPlayers.size > 0){
                     const partieCourante = parties.get(partieId); 
                     if (!partieCourante) return;
                     console.log("Tous les joueurs ont fini ! Rechargement des joueurs sur la partie :", partieId);
 
                     
-                    playerFinish.forEach(userId => {
+                    finishedPlayers.forEach(userId => {
                         //J'ai rajouter ça pour ramettre uniquement ceux qui sont encore connecté. 
                         const socketId = userToSocket.get(userId);
                         if (!socketId) return;
@@ -511,6 +515,7 @@ io.on("connection", (socket) => {
                         // Remettre les inputs à zéro
                         playerInputs.set(userId, { left: false, right: false, jump: false, ah: false});
                     });
+                    finishedPlayers.clear();
                 }
 
                 Engine.update(engine, 16);
