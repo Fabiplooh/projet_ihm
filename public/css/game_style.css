@@ -37,3 +37,32 @@ body {
   border-radius: 8px;
   display: block;
 }
+
+#leaderboard {
+  position: fixed;
+  right: 20px;
+  top: 20px;
+  width: 220px;
+  background: rgba(0,0,0,0.75);
+  color: white;
+  padding: 10px;
+  border-radius: 10px;
+  font-family: Arial;
+  z-index: 10;
+}
+
+#leaderboard h3 {
+  margin: 0 0 8px 0;
+  text-align: center;
+}
+
+.leaderboard-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 2px 4px;
+}
+
+.leaderboard-row.master {
+  color: gold;
+  font-weight: bold;
+}

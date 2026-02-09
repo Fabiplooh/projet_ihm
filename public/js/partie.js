@@ -14,6 +14,7 @@
   const loginBox = document.getElementById("loginBox");
   const doLogin = document.getElementById("doLogin");
   const loginMsg = document.getElementById("loginMsg");
+  const leaderboardDiv = document.getElementById("leaderboardList");
 
   openLogin.onclick = () => {
     loginBox.style.display =
@@ -61,6 +62,7 @@
   let exitZone = null;
   let joined =false;
   let joinAlertsDone=false;
+  let leaderboard = [];
 
   let gameMasterId = null;
   let drawing = false;
@@ -70,6 +72,26 @@
   //C'est pour voir si on est le game master ou non (affichage du trait de prévisualisation)  
   socket.on("your_id", id => myId = id);
 
+  socket.on("leaderboard", data => {
+    leaderboardDiv.innerHTML = "";
+
+    data.leaderboard.forEach((p, i) => {
+      const div = document.createElement("div");
+      div.className = "leaderboard-row";
+
+      if (p.userId === data.gameMaster) {
+        div.classList.add("master");
+      }
+
+      div.innerHTML = `
+        <span>${i+1}. ${p.pseudo}</span>
+        <span>${p.score}</span>
+      `;
+
+      leaderboardDiv.appendChild(div);
+    });
+  });
+  
   socket.on("connect", () => console.log("Socket.IO connecté", socket.id));
   socket.on("connect_error", (err) => console.error("Erreur connexion", err));
 
@@ -119,6 +141,9 @@
     menu.style.display = "none";
     canvas.style.display = "block";
     joined = true;
+
+    const leaderBoard = document.getElementById("leaderboard");
+    leaderBoard.style.display = "block";
   });
 
   socket.on("player_exit", () => {
