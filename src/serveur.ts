@@ -74,12 +74,22 @@ const userToSocket = new Map<number, string>();
 const playerColors = new Map<number, string>();
 const playerPseudos = new Map<number, string>();
 
+//c'est un peu sale faudrait factoriser avec RectCollider
+interface DrawnPlatform {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    angle: number;
+}
+
 // Parties actives
 interface Partie {
     engine: Matter.Engine;
     joueurs: Map<number, Matter.Body>; //userID
     interval: NodeJS.Timer;
     mapId: string;
+    drawnPlatforms : DrawnPlatform[];
 }
 // On accède aux parties par un dico avec comme clé une "partieID" et l'interface Partie
 const parties = new Map<string, Partie>();
@@ -379,7 +389,7 @@ io.on("connection", (socket) => {
 
             const walls = [
                 // Mur gauche
-                Bodies.rectangle(0, CANVAS_HEIGHT / 2, WALL_THICKNESS, CANVAS_HEIGHT, { isStatic: true }),
+                Bodies.rectangle(0, CANVAS_HEIGHT / 2, WALL_THICKNESS, CANVAS_HEIGHT*2, { isStatic: true }),
                 // Mur droit
                 Bodies.rectangle(CANVAS_WIDTH, CANVAS_HEIGHT / 2, WALL_THICKNESS, CANVAS_HEIGHT, { isStatic: true }),
                 // Plafond
@@ -448,7 +458,7 @@ io.on("connection", (socket) => {
                     input.jump = false;
                     }
 
-                    if(input.ah){
+                    if(input.ah){ /*CHAT GPT : a refaire, bug quand on pousse vers le haut*/
                         const PUSH_RADIUS = 100; // Rayon de la poussée
                         const PUSH_FORCE = 0.3; // Force de la poussée (ajuste selon tes besoins)
                         
@@ -457,11 +467,9 @@ io.on("connection", (socket) => {
                         
                         const pusherBody = partieCourante.joueurs.get(userId);
                         if (pusherBody){
-                            // Parcourir tous les autres joueurs de la partie
                             partieCourante.joueurs.forEach((otherBody, otherUserId) => {
                                 if (otherUserId === userId) return; // Ne pas se pousser soi-même
                                 
-                                // Calculer la distance entre les deux joueurs
                                 const dx = otherBody.position.x - pusherBody.position.x;
                                 const dy = otherBody.position.y - pusherBody.position.y;
                                 const distance = Math.sqrt(dx * dx + dy * dy);
@@ -486,16 +494,7 @@ io.on("connection", (socket) => {
                         input.ah = false;
                     }
                 });
-/*
-                playerFinish.forEach( userId => {
-                    const body = joueurs.get(userId);
-                    if (body) {
-                        World.remove(engine.world, body);
-                        joueurs.delete(userId);
-                        playerInputs.delete(userId);
-                    }
-                });
-  */             
+
                 //console.log("nombre de joueurs : ", joueurs.size);
                 if(joueurs.size === 0 && finishedPlayers.size > 0){
                     const partieCourante = parties.get(partieId); 
@@ -534,10 +533,16 @@ io.on("connection", (socket) => {
 
                 // Ici on envoie bien qu'au gens de la room partieID
                 io.to(partieId).emit("state", etat);
+                //on l'a renvoie pour les nouveaux joueurs qui rejoignent 
                 io.to(partieId).emit("map", {colliders : mapData.colliders, exit : mapData.exit});
+
+                const partieCourante = parties.get(partieId); 
+                if (!partieCourante) return;
+                io.to(partieId).emit("drawnPlatforms", partieCourante.drawnPlatforms);
             }, 16);
 
-            partie = { engine, joueurs, interval, mapId };
+            
+            partie = { engine, joueurs, interval, mapId, drawnPlatforms: []};
             parties.set(partieId, partie);
         }
         else {
@@ -576,6 +581,51 @@ io.on("connection", (socket) => {
         if (action ==="ah") input.ah = true;
     });
 
+    socket.on("action_master", (path: {x:number, y:number}[]) => {
+        const userId = socketToUser.get(socket.id);
+        if (!userId) return; 
+        for (const [partieId, partie] of parties.entries()){
+            if (partie.joueurs.has(userId)){
+                createPlatformFromPath(partie, path); 
+            }
+        }
+    });
+
+    function createPlatformFromPath(partie: Partie, path : {x:number, y:number}[]) {
+        const thickness = 10;
+
+        for (let i = 1; i < path.length; i++) {
+            const p1 = path[i - 1];
+            const p2 = path[i];
+
+            const dx = p2.x - p1.x;
+            const dy = p2.y - p1.y;
+            const length = Math.sqrt(dx * dx + dy * dy);
+            const angle = Math.atan2(dy, dx);
+
+            const x = (p1.x + p2.x) / 2;
+            const y = (p1.y + p2.y) / 2;
+      
+            const segment = Bodies.rectangle(x, y, length, thickness, {
+                isStatic: true,
+                friction: 0.8,
+                restitution: 0,
+                collisionFilter: {
+                category: 0x0002   // catégorie "traits"
+                }
+            });
+
+            Body.setAngle(segment, angle);
+            World.add(partie.engine.world, segment);
+            partie.drawnPlatforms.push({
+                x, y,
+                width: length,
+                height: thickness,
+                angle
+            });
+        }
+        //io.to(partieId).emit("map", {colliders : mapData.colliders, exit : mapData.exit});
+    }
 
     socket.on("disconnecting", () => {
         console.log("Client déconnecté", socket.id);
