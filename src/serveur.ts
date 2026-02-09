@@ -67,6 +67,8 @@ const parties = new Map<string, Partie>();
 // Va nous permettre de stocker les inputs de chaques player. Ce sont donc des boolean stocker dans un dico avec comme clé l'userId 
 // du joueur (qui est unique et creer a la connection). La clé string est la socket. 
 const playerInputs = new Map<number, PlayerInput>()
+// clé userId - valeur : score actuel
+const playersScore = new Map<number, number>();
 
 
 
@@ -393,6 +395,8 @@ io.on("connection", (socket) => {
             ah: false,
         });
       
+        playersScore.set(userId, 0);
+
         //Creer une "room" pour cette partie. On peut ensuite envoyer a tout ceux dedans facilement : "io.to(partieId).emit("state", etat);"
         socket.join(partieId);
 
@@ -458,11 +462,34 @@ io.on("connection", (socket) => {
                     } 
 
                     if (checkPlayerReachedExit(body, userId, exitBody)){
+                        let curScore = playersScore.get(userId);
+                        if (curScore === undefined){
+                            console.warn("Score manquant pour", userId);
+                            playersScore.set(userId, 0);
+                        }
+                        else {
+                            switch (finishedPlayers.size){
+                                case 0 :
+                                    //Le joueur a finit premier
+                                    playersScore.set(userId, curScore + 20);
+                                    break ;
+                                case 1: 
+                                    playersScore.set(userId, curScore + 16);
+                                    break;
+                                case 2:
+                                    playersScore.set(userId, curScore + 13);
+                                    break;
+                                default :
+                                    playersScore.set(userId, curScore + 10);
+                                    break;
+                            }
+
+                        }
+                        console.log(playersScore.get(userId));
                         finishedPlayers.add(userId);
                         World.remove(engine.world, body);
                         joueurs.delete(userId);
                         playerInputs.delete(userId);
-
                         return;
                     }               
 
