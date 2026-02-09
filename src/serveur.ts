@@ -62,6 +62,15 @@ const playerColors = new Map<number, string>();
 const playerPseudos = new Map<number, string>();
 
 // Parties actives
+interface Partie {
+    engine: Matter.Engine;
+    joueurs: Map<number, Matter.Body>; //userID
+    interval: NodeJS.Timer;
+    mapId: string;
+    drawnPlatforms : DrawnPlatform[];
+    drawnBodies : Matter.Body[];
+}
+// On accède aux parties par un dico avec comme clé une "partieID" et l'interface Partie
 const parties = new Map<string, Partie>();
 
 // Va nous permettre de stocker les inputs de chaques player. Ce sont donc des boolean stocker dans un dico avec comme clé l'userId 
@@ -285,9 +294,68 @@ function checkPlayerReachedExit(body: Matter.Body, userId : number, exitBody : M
     return true;
 }
 
+function createPlatformFromPath(partie: Partie, path : {x:number, y:number}[]) {
+    const thickness = 10;
 
+    for (let i = 1; i < path.length; i++) {
+        const p1 = path[i - 1];
+        const p2 = path[i];
 
+        const dx = p2.x - p1.x;
+        const dy = p2.y - p1.y;
+        const length = Math.sqrt(dx * dx + dy * dy);
+        const angle = Math.atan2(dy, dx);
 
+        const x = (p1.x + p2.x) / 2;
+        const y = (p1.y + p2.y) / 2;
+  
+        const segment = Bodies.rectangle(x, y, length, thickness, {
+            isStatic: true,
+            friction: 0.8,
+        });
+
+        Body.setAngle(segment, angle);
+        World.add(partie.engine.world, segment);
+        //sav
+        partie.drawnPlatforms.push({
+            x, y,
+            width: length,
+            height: thickness,
+            angle
+        });
+        partie.drawnBodies.push(segment);
+    }
+}
+
+function resetPartie(partieId: string, finishedPlayers : Set<number>){
+    const partieCourante = parties.get(partieId); 
+    if (!partieCourante) return;
+
+    console.log("Tous les joueurs ont fini ! Rechargement des joueurs sur la partie :", partieId);
+    
+    partieCourante.drawnBodies.forEach(b => {
+        World.remove(partieCourante.engine.world, b);
+    });
+    
+    partieCourante.drawnPlatforms.length = 0;
+    partieCourante.drawnBodies.length = 0;
+
+    io.to(partieId).emit("deleteDrawnPlatform");
+    
+    finishedPlayers.forEach((userId) => {
+        //J'ai rajouter ça pour ramettre uniquement ceux qui sont encore connecté. 
+        const socketId = userToSocket.get(userId);
+        if (!socketId) return;
+
+        const playerBody = Bodies.rectangle(400, 0, 40, 40);
+        Body.setInertia(playerBody, Infinity);
+        partieCourante.joueurs.set(userId, playerBody);
+        World.add(partieCourante.engine.world, [playerBody]);
+        // Remettre les inputs à zéro
+        playerInputs.set(userId, { left: false, right: false, jump: false, ah: false});
+    });
+    finishedPlayers.clear();
+}
 
 // Socket.IO
 // On a creer un serveur http et on connecte les joueurs (client html) qui se connecte sur la page partie. Ils sont ensuite mis dans la partie
@@ -465,25 +533,9 @@ io.on("connection", (socket) => {
                 });
 
                 //console.log("nombre de joueurs : ", joueurs.size);
+                //Ici, on recreer juste les joueurs. Si on veut c'est ici qu'on change de map quand les joueurs ont fini ...
                 if(joueurs.size === 0 && finishedPlayers.size > 0){
-                    const partieCourante = parties.get(partieId); 
-                    if (!partieCourante) return;
-                    console.log("Tous les joueurs ont fini ! Rechargement des joueurs sur la partie :", partieId);
-
-                    
-                    finishedPlayers.forEach(userId => {
-                        //J'ai rajouter ça pour ramettre uniquement ceux qui sont encore connecté. 
-                        const socketId = userToSocket.get(userId);
-                        if (!socketId) return;
-
-                        const playerBody = Bodies.rectangle(400, 0, 40, 40);
-                        Body.setInertia(playerBody, Infinity);
-                        partieCourante.joueurs.set(userId, playerBody);
-                        World.add(partieCourante.engine.world, [playerBody]);
-                        // Remettre les inputs à zéro
-                        playerInputs.set(userId, { left: false, right: false, jump: false, ah: false});
-                    });
-                    finishedPlayers.clear();
+                    resetPartie(partieId, finishedPlayers);
                 }
 
                 Engine.update(engine, 16);
@@ -510,14 +562,19 @@ io.on("connection", (socket) => {
                 io.to(partieId).emit("drawnPlatforms", partieCourante.drawnPlatforms);
             }, 16);
 
-            
-            partie = { engine, joueurs, interval, mapId, drawnPlatforms: []};
+            partie = { 
+                engine, 
+                joueurs, 
+                interval, 
+                mapId, 
+                drawnPlatforms: [], 
+                drawnBodies: []
+            };
             parties.set(partieId, partie);
         }
         else {
             socket.emit("connection_not_first");
         }
-
 
         // Ajouter le joueur a la partie :(dans tous les cas si on a une connection)
         const playerBody = Bodies.rectangle(400, 0, 40, 40);
@@ -629,5 +686,5 @@ io.on("connection", (socket) => {
 });*/
 httpServer.listen(port, '0.0.0.0', () => {
     console.log(`[server]: Server is running at http://0.0.0.0:${port}`);
-    console.log(`[server]: Accessible sur le réseau local à http://192.168.1.7:${port}`);
+    console.log(`[server]: Accessible sur le réseau local à http://localhost:${port}`);
 });

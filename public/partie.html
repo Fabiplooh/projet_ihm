@@ -252,6 +252,10 @@
             drawnPlatforms = data;
         });
 
+        socket.on("deleteDrawnPlatform", data => {
+            path.length=0;
+        });
+
         // Dessin
         function loop() {
             console.log("[CLIENT] Loop appelée - joined:", joined);

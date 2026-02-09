@@ -7,4 +7,16 @@ Faire en sorte que les gens qui join un salon deja remplis voit que c'est pas la
 Rajouter nom au dessus du joueur DONE
 Rejoindre des maps deja existante avec un menu déroualnt en plus de pouvoir taper 
 
-Ajouter un systeme de login où son stocker le pseudo, la couleur et des stats divers tel que : nombre de sauts, map finis etc... 
+Ajouter un systeme de login où son stocker le pseudo, la couleur et des stats divers tel que : nombre de sauts, map finis etc...
+
+
+
+
+Faire différent role pour avoir acces à la souris : 
+    - Faire un systeme de point en fonction de notre position dans le classement. 
+    - Le premier sera le "gameMaster" et pourra utiliser la souris. A voir si on le supprime du jeu (le personnage)
+    - Apres avoir été un gameMaster, il redescendra a 0 points. 
+
+
+Faire en sorte que si l'on tombe, on est mort. 
+
