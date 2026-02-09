@@ -47,16 +47,14 @@
     }
 
     const res = await api('/auth/login', { identifiant, password });
-    showResult('loginResult', res.message, res.ok);
-  };
+    
+    if (res.ok) {
+        console.log(res.message);
+        // Redirection vers /partie après connexion réussie
+        window.location.href = "/partie";
+    } else {
+        alert(res.message);
+    }
 
-  document.getElementById('btnMe').onclick = async () => {
-    const res = await api('/me',{});
-    showResult('meResult', res.message, res.ok);
-  };
-
-  document.getElementById('btnLogout').onclick = async () => {
-    const res = await api('/auth/logout', {});
-    showResult('logoutResult', res.message || "Déconnecté", res.ok);
   };
 })();
