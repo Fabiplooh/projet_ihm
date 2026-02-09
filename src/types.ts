@@ -54,6 +54,7 @@ export interface Partie {
     mapId: string;
     drawnPlatforms: DrawnPlatform[];
     drawnBodies : Matter.Body[];
+    gameMaster?: number; // L'userId du joueur maitre (qui a al souris)
 }
 
 export interface PlayerState {

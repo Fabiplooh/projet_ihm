@@ -62,6 +62,14 @@
   let joined =false;
   let joinAlertsDone=false;
 
+  let gameMasterId = null;
+  let drawing = false;
+  let path = [];
+  let myId = null;
+
+  //C'est pour voir si on est le game master ou non (affichage du trait de prévisualisation)  
+  socket.on("your_id", id => myId = id);
+
   socket.on("connect", () => console.log("Socket.IO connecté", socket.id));
   socket.on("connect_error", (err) => console.error("Erreur connexion", err));
 
@@ -132,9 +140,13 @@
     });
 
   });
+  
 
-  let drawing = false;
-  let path = [];
+  socket.on("game_master", (id) => {
+    gameMasterId = id;
+    console.log("GM:", id);
+  });
+  
 
   document.addEventListener("mousedown", e => {
     drawing = true;
@@ -147,7 +159,7 @@
   });
 
   document.addEventListener("mousemove", e => {
-    if(!drawing) return;
+    if(!drawing || gameMasterId !== myId) return;
     const rectToServ = canvas.getBoundingClientRect();
     path.push({
       x: e.clientX - rectToServ.left,
@@ -258,13 +270,19 @@
 
     for (const id in joueurs) {
       const p = joueurs[id];
+  
       ctx.save();
       ctx.translate(p.x, p.y);
       ctx.font = "14px Arial";
       ctx.textAlign = "center";
       ctx.textBaseline = "bottom";
       ctx.lineWidth = 3;
-      ctx.strokeStyle = "black";
+      if (Number(id) === gameMasterId){
+        ctx.strokeStyle ="gold";
+        ctx.lineWidth = 2;
+      }else{
+        ctx.strokeStyle = "black";
+      }
       ctx.strokeText(p.pseudoPlayer || "", 0, -24);
       ctx.fillStyle = "white";
       ctx.fillText(p.pseudoPlayer || "", 0, -24);

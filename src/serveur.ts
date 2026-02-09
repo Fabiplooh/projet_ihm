@@ -325,7 +325,17 @@ function resetPartie(partieId: string, finishedPlayers : Set<number>){
     if (!partieCourante) return;
 
     console.log("Tous les joueurs ont fini ! Rechargement des joueurs sur la partie :", partieId);
+    const oldMaster = partieCourante.gameMaster;
+
+    if (oldMaster !== undefined) {
+        playersScore.set(oldMaster, 0); 
+    }
     
+    const newIdGameMaster = getLeader();
+    partieCourante.gameMaster = newIdGameMaster;
+    console.log("Nouveau GameMaster:", newIdGameMaster);
+    io.to(partieId).emit("game_master", partieCourante.gameMaster);
+
     partieCourante.drawnBodies.forEach(b => {
         World.remove(partieCourante.engine.world, b);
     });
@@ -354,6 +364,19 @@ function resetPartie(partieId: string, finishedPlayers : Set<number>){
         playerInputs.set(userId, { left: false, right: false, jump: false, ah: false});
     });
     finishedPlayers.clear();
+}
+
+function getLeader(): number | undefined {
+    let bestId: number | undefined = undefined;
+    let bestScore = -Infinity;
+
+    for (const [userId, score] of playersScore.entries()) {
+        if (score > bestScore) {
+            bestScore = score;
+            bestId = userId;
+        }
+    }
+    return bestId;
 }
 
 // Socket.IO
@@ -397,9 +420,10 @@ io.on("connection", (socket) => {
       
         playersScore.set(userId, 0);
 
+        socket.emit("your_id", userId);
+
         //Creer une "room" pour cette partie. On peut ensuite envoyer a tout ceux dedans facilement : "io.to(partieId).emit("state", etat);"
         socket.join(partieId);
-
 
         let partie = parties.get(partieId);
 
@@ -447,7 +471,9 @@ io.on("connection", (socket) => {
             )
             World.add(engine.world, [exitBody])
             const finishedPlayers = new Set<number>();
-          
+            
+
+
             //On met a jour l'etat du monde : la vitesse du joueur en fonction de son input (donc de la Hashmap PlayerInput)
             const interval = setInterval(() => {
       
@@ -593,11 +619,20 @@ io.on("connection", (socket) => {
                 mapId, 
                 drawnPlatforms: [], 
                 drawnBodies: []
+                
             };
+
+            partie.gameMaster = userId;   // le premier devient Game Master
+            console.log("Nouveau GameMaster:", userId);
+            io.to(partieId).emit("game_master", userId);
+
             parties.set(partieId, partie);
         }
         else {
             socket.emit("connection_not_first");
+            if (partie.gameMaster !== undefined) {
+                socket.emit("game_master", partie.gameMaster);
+            }
         }
 
         // Ajouter le joueur a la partie :(dans tous les cas si on a une connection)
@@ -636,10 +671,11 @@ io.on("connection", (socket) => {
     socket.on("action_master", (path: Array<{ x: number; y: number }>) => {
         const userId = socketToUser.get(socket.id);
         if (!userId) return; 
-        for (const [partieId, partie] of parties.entries()){
-            if (partie.joueurs.has(userId)){
-                createPlatformFromPath(partie, path); 
-            }
+        for (const partie of parties.values()){
+            //if (!partie.joueurs.has(userId)) continue;
+            if (partie.gameMaster !== userId) continue;
+
+            createPlatformFromPath(partie, path); 
         }
     });
 
