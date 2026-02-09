@@ -76,8 +76,8 @@ app.get("/partie", (req: Request, res: Response) => {
     console.log(`[server]: Un client essaye de se connecter a partie`);
 });
 
-app.get("/test-login", (req: Request, res: Response) => {
-    res.sendFile(path.join(__dirname,"..","public","test-login.html"));
+app.get("/login", (req: Request, res: Response) => {
+    res.sendFile(path.join(__dirname,"..","public","login.html"));
 });
 
 // Page d'accueil
