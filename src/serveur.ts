@@ -332,13 +332,19 @@ function resetPartie(partieId: string, finishedPlayers : Set<number>){
     partieCourante.drawnBodies.length = 0;
 
     io.to(partieId).emit("deleteDrawnPlatform");
+    io.to(partieId).emit("drawnPlatforms");
     
     finishedPlayers.forEach((userId) => {
         //J'ai rajouter ça pour ramettre uniquement ceux qui sont encore connecté. 
         const socketId = userToSocket.get(userId);
         if (!socketId) return;
 
-        const playerBody = Bodies.rectangle(400, 0, 40, 40);
+        const playerBody = Bodies.rectangle(400, 0, 40, 40, {
+            friction :0,
+            frictionAir :0.01,
+            frictionStatic :0,
+        });
+
         Body.setInertia(playerBody, Infinity);
         partieCourante.joueurs.set(userId, playerBody);
         World.add(partieCourante.engine.world, [playerBody]);
@@ -568,7 +574,11 @@ io.on("connection", (socket) => {
         }
 
         // Ajouter le joueur a la partie :(dans tous les cas si on a une connection)
-        const playerBody = Bodies.rectangle(400, 0, 40, 40);
+        const playerBody = Bodies.rectangle(400, 0, 40, 40,{
+            friction :0,
+            frictionAir :0.01,
+            frictionStatic :0,
+        });
         // Empêche la rotation (important pour un joueur)
         Body.setInertia(playerBody, Infinity);
         partie.joueurs.set(userId, playerBody);
@@ -606,41 +616,6 @@ io.on("connection", (socket) => {
         }
     });
 
-    function createPlatformFromPath(partie: Partie, path: Array<{ x: number; y: number }>) {
-        const thickness = 10;
-
-        for (let i = 1; i < path.length; i++) {
-            const p1 = path[i - 1];
-            const p2 = path[i];
-
-            const dx = p2.x - p1.x;
-            const dy = p2.y - p1.y;
-            const length = Math.sqrt(dx * dx + dy * dy);
-            const angle = Math.atan2(dy, dx);
-
-            const x = (p1.x + p2.x) / 2;
-            const y = (p1.y + p2.y) / 2;
-      
-            const segment = Bodies.rectangle(x, y, length, thickness, {
-                isStatic: true,
-                friction: 0.8,
-                restitution: 0,
-                collisionFilter: {
-                category: 0x0002   // catégorie "traits"
-                }
-            });
-
-            Body.setAngle(segment, angle);
-            World.add(partie.engine.world, segment);
-            partie.drawnPlatforms.push({
-                x, y,
-                width: length,
-                height: thickness,
-                angle
-            });
-        }
-        //io.to(partieId).emit("map", {colliders : mapData.colliders, exit : mapData.exit});
-    }
 
     socket.on("disconnecting", () => {
         console.log("Client déconnecté", socket.id);
