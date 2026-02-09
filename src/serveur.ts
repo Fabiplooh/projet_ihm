@@ -8,7 +8,7 @@ import session from "express-session";
 import { Session } from "express-session"
 import bcrypt from "bcrypt";
 import { db } from "./db";
-
+import { User, UserLogin, UserProfile, PlayerInput, RectCollider, MapData, DrawnPlatform, Partie, PlayerState, JoinData } from "./types";
 declare module "express-session" {
     interface SessionData {
         userId?: number;
@@ -30,19 +30,6 @@ app.use(express.json());
 app.use(express.urlencoded({extended: true}));
 
 // Maps stockées côté serveur (JSON)
-interface RectCollider {
-    x : number;
-    y : number;
-    width : number;
-    height : number;
-}
-
-interface MapData {
-    name: string;
-    colliders : RectCollider[];
-    exit : RectCollider;
-}
-
 const maps: Record<string, MapData> = {
     "map1": { 
         name : "Map simple",
@@ -74,34 +61,12 @@ const userToSocket = new Map<number, string>();
 const playerColors = new Map<number, string>();
 const playerPseudos = new Map<number, string>();
 
-//c'est un peu sale faudrait factoriser avec RectCollider
-interface DrawnPlatform {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    angle: number;
-}
-
 // Parties actives
-interface Partie {
-    engine: Matter.Engine;
-    joueurs: Map<number, Matter.Body>; //userID
-    interval: NodeJS.Timer;
-    mapId: string;
-    drawnPlatforms : DrawnPlatform[];
-}
-// On accède aux parties par un dico avec comme clé une "partieID" et l'interface Partie
 const parties = new Map<string, Partie>();
 
 // Va nous permettre de stocker les inputs de chaques player. Ce sont donc des boolean stocker dans un dico avec comme clé l'userId 
 // du joueur (qui est unique et creer a la connection). La clé string est la socket. 
-const playerInputs = new Map<number, {
-    left: boolean;
-    right: boolean;
-    jump: boolean;
-    ah: boolean;
-}>
+const playerInputs = new Map<number, PlayerInput>()
 
 
 
@@ -164,7 +129,7 @@ const io = new Server(httpServer);
 //Connexion a la base de donnée
 const SQLiteStore = connectSqlite3(session);
 
-// On utilise une session, qui stock des infos comme userId (quand on fait req.session as any . userId = user.id)
+// On utilise une session, qui stock des infos comme userId (quand on fait req.session... userId = user.id)
 // C'est ensuite stocker dans le fichier sessions.sqlite et utilisé comme cookie par le navigateur. Ca permet d'eviter de 
 // devoir recreer tout a chaque refresh de page etc.. Il fait le travail de charger/sauvegarder aussi 
 const sessionMiddleware = session({
@@ -222,7 +187,7 @@ app.post("/auth/login", async (req, res) => {
     //Recherche du gonze
     const user = db.prepare(`
         SELECT id, password_hash FROM users WHERE identifiant = ?
-    `).get(identifiant) as any;
+    `).get(identifiant) as UserLogin | undefined;
 
     if (!user) {
         res.status(401).json({ ok: false, message : "Le compte n'existe pas."});
@@ -249,7 +214,12 @@ app.post("/me", async (req, res) => {
 
     const user = db.prepare(`
         SELECT identifiant, pseudo, color FROM users WHERE id = ?
-    `).get(req.session.userId) as any;
+    `).get(req.session.userId) as UserProfile | undefined;
+
+    if (!user) {
+        res.status(401).json({ ok: false, message : "Utilisateur non trouvé."});
+        return;
+    }
 
     res.json({ ok: true, user, message : `Pseudo = ${user.pseudo}; Identifiant = ${user.identifiant}` });
 });
@@ -326,12 +296,11 @@ io.on("connection", (socket) => {
     console.log("Client connecté", socket.id);
 
     // Rejoindre une partie et demander une map
-    socket.on("join", (data: { partieId: string; mapId: string}) => {
+    socket.on("join", (data: JoinData) => {
         const { partieId, mapId } = data;
       
         // récupérer userId depuis la session
-        // @ts-ignore
-        const userId = socket.request.session.userId as number;
+        const userId = (socket.request as any).session?.userId as number | undefined;
         if (!userId) {
             socket.emit("join_error", "not_logged_in");
             console.log("Bug sur l'obtention du userId", socket.id);
@@ -341,7 +310,7 @@ io.on("connection", (socket) => {
         socketToUser.set(socket.id, userId);
         userToSocket.set(userId, socket.id);
 
-        const user = db.prepare(`SELECT pseudo, color FROM users WHERE id = ?`).get(userId) as any;
+        const user = db.prepare(`SELECT pseudo, color FROM users WHERE id = ?`).get(userId) as UserProfile | undefined;
         if (!user) {
             socket.emit("join_error", "not_logged_in");
             console.log("Bug sur la recupération des donnés en bd", socket.id);
@@ -520,7 +489,7 @@ io.on("connection", (socket) => {
                 Engine.update(engine, 16);
                 
                 // envoyer état à tous les clients de la partie
-                const etat: Record<string, { x: number; y: number; angle: number, colorPlayer : string, pseudoPlayer : string}> = {};
+                const etat: Record<number, PlayerState> = {};
                 joueurs.forEach((body, userId) => {
                     etat[userId] = { 
                         x: body.position.x, 
@@ -568,10 +537,8 @@ io.on("connection", (socket) => {
         const userId = socketToUser.get(socket.id);
         if (!userId) return;
 
-        const input = playerInputs.get(userId)!;
-        if (!action) return;
-
-        if(!input) return;
+        const input = playerInputs.get(userId);
+        if (!action || !input) return;
 
         if (action === "left") input.left = true;
         if (action === "right") input.right = true;
@@ -581,7 +548,7 @@ io.on("connection", (socket) => {
         if (action ==="ah") input.ah = true;
     });
 
-    socket.on("action_master", (path: {x:number, y:number}[]) => {
+    socket.on("action_master", (path: Array<{ x: number; y: number }>) => {
         const userId = socketToUser.get(socket.id);
         if (!userId) return; 
         for (const [partieId, partie] of parties.entries()){
@@ -591,7 +558,7 @@ io.on("connection", (socket) => {
         }
     });
 
-    function createPlatformFromPath(partie: Partie, path : {x:number, y:number}[]) {
+    function createPlatformFromPath(partie: Partie, path: Array<{ x: number; y: number }>) {
         const thickness = 10;
 
         for (let i = 1; i < path.length; i++) {
@@ -647,10 +614,10 @@ io.on("connection", (socket) => {
 
             //Gestion du dico si il n'y a plus de joueurs dans le salon courant 
             if(partie.joueurs.size == 0){
-                //Typage en Timer donc chiant d'où la ligne un peu magique avec cast moche
-                clearInterval(partie.interval as unknown as any); // Stop la boucle qui envoie les données aux clients
+                //Typage en Timer
+                clearInterval(partie.interval as ReturnType<typeof setTimeout>); // Stop la boucle qui envoie les données aux clients
                 parties.delete(partieId)
-                console.log('Partie "${partieID}" supprimée car plus aucuns joueurs dedans !')
+                console.log(`Partie "${partieId}" supprimée car plus aucun joueur dedans !`)
             }
         }
     });
