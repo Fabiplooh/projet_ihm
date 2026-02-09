@@ -54,6 +54,8 @@ const maps: Record<string, MapData> = {
     }
 };
 
+const KILL_Y = 2000; // à adapter à la taille de ta map
+
 const socketToUser = new Map<string, number>();
 const userToSocket = new Map<number, string>();
 
@@ -379,6 +381,16 @@ function getLeader(): number | undefined {
     return bestId;
 }
 
+function killPlayer(partie: Partie, userId: number, finishedPlayers : Set<number>){
+    const body = partie.joueurs.get(userId);
+    if (!body) return;
+
+    finishedPlayers.add(userId);
+    World.remove(partie.engine.world, body);
+    partie.joueurs.delete(userId);
+    playerInputs.delete(userId);
+}
+
 // Socket.IO
 // On a creer un serveur http et on connecte les joueurs (client html) qui se connecte sur la page partie. Ils sont ensuite mis dans la partie
 // correspondant à leur demande et sont connecté via socket avec socket.io
@@ -443,7 +455,7 @@ io.on("connection", (socket) => {
                 const ground = Bodies.rectangle(g.x, g.y, g.width, g.height, { isStatic: true });
                 World.add(engine.world, [ground]);
             });
-          
+        
             //creer le bord de map
             const CANVAS_WIDTH = 800;
             const CANVAS_HEIGHT = 600;
@@ -581,12 +593,21 @@ io.on("connection", (socket) => {
                         input.ah = false;
                     }
                 });
+                //Gestion des joueurs tombés 
+                const partieCourante = parties.get(partieId); 
+                if (!partieCourante) return;
+                for (const [userId, body] of partieCourante.joueurs.entries()) {
+                    if (body.position.y > KILL_Y) {
+                        killPlayer(partieCourante, userId, finishedPlayers);
+                    }
+                }
 
                 //console.log("nombre de joueurs : ", joueurs.size);
                 //Ici, on recreer juste les joueurs. Si on veut c'est ici qu'on change de map quand les joueurs ont fini ...
                 if(joueurs.size === 0 && finishedPlayers.size > 0){
                     resetPartie(partieId, finishedPlayers);
                 }
+
 
                 Engine.update(engine, 16);
                 
@@ -607,8 +628,6 @@ io.on("connection", (socket) => {
                 //on l'a renvoie pour les nouveaux joueurs qui rejoignent 
                 io.to(partieId).emit("map", {colliders : mapData.colliders, exit : mapData.exit});
 
-                const partieCourante = parties.get(partieId); 
-                if (!partieCourante) return;
                 io.to(partieId).emit("drawnPlatforms", partieCourante.drawnPlatforms);
             }, 16);
 
