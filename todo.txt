@@ -18,7 +18,11 @@ Faire différent role pour avoir acces à la souris :
     - Apres avoir été un gameMaster, il redescendra a 0 points. 
 
 
+Le gameMaster doit pouvoir continuer de dessiner à sa "mort DONE"
+
 Faire en sorte que si l'on tombe, on est mort. 
+Afficher le leaderboard
+Barre de chargement pour le ah 
+Mettre un timer au debut de la partie
 
 
-Le gameMaster doit pouvoir continuer de dessiner à sa "mort"

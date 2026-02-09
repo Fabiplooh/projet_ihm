@@ -457,7 +457,6 @@ io.on("connection", (socket) => {
                 const ground = Bodies.rectangle(g.x, g.y, g.width, g.height, { isStatic: true });
                 World.add(engine.world, [ground]);
             });
-        
             //creer le bord de map
             const CANVAS_WIDTH = 800;
             const CANVAS_HEIGHT = 600;
