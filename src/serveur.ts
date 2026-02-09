@@ -23,11 +23,8 @@ const port = Number(process.env.PORT) || 3000;
 // connect-sqlite3 n'a pas de types → require obligatoire
 const connectSqlite3 = require("connect-sqlite3");
 
-const { Engine, World, Bodies, Body } = Matter;
 
-app.use(express.static(path.join(__dirname,"..","public")));
-app.use(express.json());
-app.use(express.urlencoded({extended: true}));
+const { Engine, World, Bodies, Body } = Matter;
 
 // Maps stockées côté serveur (JSON)
 const maps: Record<string, MapData> = {
@@ -72,56 +69,6 @@ const playersScore = new Map<number, number>();
 
 
 
-// Page partie
-app.get("/partie", (req: Request, res: Response) => {
-    res.sendFile(path.join(__dirname,"..","public","partie.html"));
-    console.log(`[server]: Un client essaye de se connecter a partie`);
-});
-
-app.get("/login", (req: Request, res: Response) => {
-    res.sendFile(path.join(__dirname,"..","public","login.html"));
-});
-
-// Page d'accueil
-app.get("/", (req: Request, res: Response) => {
-    res.send(`<html>
-               <head>
-                    <link rel="stylesheet" href="roulette.css" />
-                    <title> Coucou les meef </title>
-               </head>
-               <body> 
-                   <h1>Un cours pour voir HTTP</h1>
-                   <p>Avec un serveur Express</p>
-               </body>
-            </html> 
-           `
-    );
-});
-
-app.get("/roulette.css", (req : Request, res : Response) => {
-    const randomColor = '#' + Math.floor(Math.random()*16777215).toString(16)
-    res.send(`
-              body {
-                  background-color: ${randomColor};
-                  color : white;
-              }
-             `
-    )
-});
-
-// Addition simple
-app.all("/add", (req: Request, res: Response) => {
-    const a = Number(req.body.a ?? req.query.a);
-    const b = Number(req.body.b ?? req.query.b);
-    if (Number.isNaN(a) || Number.isNaN(b)) {
-        res.status(400).json({ error: "Invalid numbers" });
-        return;
-    }
-    const sum = a + b;
-    res.json({ result: sum });
-});
-
-
 
 
 // Créer le serveur HTTP et Socket.IO
@@ -141,6 +88,8 @@ const sessionMiddleware = session({
     saveUninitialized: false,
 });
 
+app.use(express.json());
+app.use(express.urlencoded({extended: true}));
 app.use(sessionMiddleware);
 
 io.use((socket, next) => {
@@ -149,6 +98,63 @@ io.use((socket, next) => {
 });
 
 
+// Page de login
+app.get("/login", (req: Request, res: Response) => {
+    res.sendFile(path.join(__dirname,"..","public","login.html"));
+});
+
+// MIDDLEWARE GLOBAL : toutes les requêtes GET renvoient sur /login
+app.use((req, res, next) => {
+    // Autoriser les fichiers statiques (CSS, JS, images, etc.)
+    if (req.path.endsWith(".css") ||
+        req.path.endsWith(".js") ||
+        req.path.endsWith(".png") ||
+        req.path.endsWith(".jpg") ||
+        req.path.endsWith(".jpeg") ||
+        req.path.endsWith(".gif") ||
+        req.path.endsWith(".svg") ||
+        req.path.endsWith(".ico")) {
+        next();
+        return;
+    }
+    
+    // Autoriser les routes POST et les fichiers statiques essentiels
+    if (req.method === "POST" || req.path.startsWith("/auth/")) {
+        next();
+        return;
+    }
+
+    // Vérifier si connecté pour toutes les autres routes
+    if (req.method === "GET" &&!req.session.userId && req.path !== "/login") {
+        res.redirect("/login");
+        return;
+    }
+
+    next();
+});
+
+// Page d'accueil
+app.get("/", (req: Request, res: Response) => {
+    res.send(`<html>
+               <head>
+                    <link rel="stylesheet" href="roulette.css" />
+                    <title> Coucou les meef </title>
+               </head>
+               <body> 
+                   <h1>Hopla</h1>
+               </body>
+            </html> 
+           `
+    );
+});
+
+// Page partie
+app.get("/partie", (req: Request, res: Response) => {
+    res.sendFile(path.join(__dirname,"..","public","partie.html"));
+    console.log(`[server]: Un client essaye de se connecter a partie`);
+});
+
+app.use(express.static(path.join(__dirname,"..","public")));
 
 //Pour le login : 
 // REGISTER - On ajoute à la base de donnée et on connecte puis message OK
@@ -230,10 +236,6 @@ app.post("/me", async (req, res) => {
 app.post("/auth/logout", (req, res) => {
     req.session.destroy(() => res.json({ ok: true, message : "Vous êtes déconnecté." }));
 });
-
-
-
-
 
 
 //Sert a détecter le sol pour éviter de sauter dans les airs et donc limiter les double ou triple sauts
