@@ -53,6 +53,7 @@ export interface Partie {
     interval: NodeJS.Timer;
     mapId: string;
     drawnPlatforms: DrawnPlatform[];
+    drawnBodies : Matter.Body[];
 }
 
 export interface PlayerState {

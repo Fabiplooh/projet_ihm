@@ -61,15 +61,6 @@ const userToSocket = new Map<number, string>();
 const playerColors = new Map<number, string>();
 const playerPseudos = new Map<number, string>();
 
-// Parties actives
-interface Partie {
-    engine: Matter.Engine;
-    joueurs: Map<number, Matter.Body>; //userID
-    interval: NodeJS.Timer;
-    mapId: string;
-    drawnPlatforms : DrawnPlatform[];
-    drawnBodies : Matter.Body[];
-}
 // On accède aux parties par un dico avec comme clé une "partieID" et l'interface Partie
 const parties = new Map<string, Partie>();
 
