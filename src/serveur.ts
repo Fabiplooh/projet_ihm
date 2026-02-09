@@ -90,6 +90,7 @@ interface Partie {
     interval: NodeJS.Timer;
     mapId: string;
     drawnPlatforms : DrawnPlatform[];
+    drawnBodies : Matter.Body[];
 }
 // On accède aux parties par un dico avec comme clé une "partieID" et l'interface Partie
 const parties = new Map<string, Partie>();
@@ -496,16 +497,23 @@ io.on("connection", (socket) => {
                 });
 
                 //console.log("nombre de joueurs : ", joueurs.size);
+                //Ici, on recreer juste les joueurs. Si on veut c'est ici qu'on change de map quand les joueurs ont fini ...
                 if(joueurs.size === 0 && finishedPlayers.size > 0){
                     const partieCourante = parties.get(partieId); 
                     if (!partieCourante) return;
                     console.log("Tous les joueurs ont fini ! Rechargement des joueurs sur la partie :", partieId);
+                    partieCourante.drawnBodies.forEach(b => {
+                        World.remove(partieCourante.engine.world, b);
+                    });
+                    partieCourante.drawnPlatforms.length = 0;
 
+                    io.to(partieId).emit("deleteDrawnPlatform");
                     
                     finishedPlayers.forEach(userId => {
                         //J'ai rajouter ça pour ramettre uniquement ceux qui sont encore connecté. 
                         const socketId = userToSocket.get(userId);
                         if (!socketId) return;
+                        
 
                         const playerBody = Bodies.rectangle(400, 0, 40, 40);
                         Body.setInertia(playerBody, Infinity);
@@ -515,6 +523,7 @@ io.on("connection", (socket) => {
                         playerInputs.set(userId, { left: false, right: false, jump: false, ah: false});
                     });
                     finishedPlayers.clear();
+                    
                 }
 
                 Engine.update(engine, 16);
@@ -541,8 +550,14 @@ io.on("connection", (socket) => {
                 io.to(partieId).emit("drawnPlatforms", partieCourante.drawnPlatforms);
             }, 16);
 
-            
-            partie = { engine, joueurs, interval, mapId, drawnPlatforms: []};
+            partie = { 
+                engine, 
+                joueurs, 
+                interval, 
+                mapId, 
+                drawnPlatforms: [], 
+                drawnBodies: []
+            };
             parties.set(partieId, partie);
         }
         else {
@@ -609,20 +624,18 @@ io.on("connection", (socket) => {
             const segment = Bodies.rectangle(x, y, length, thickness, {
                 isStatic: true,
                 friction: 0.8,
-                restitution: 0,
-                collisionFilter: {
-                category: 0x0002   // catégorie "traits"
-                }
             });
 
             Body.setAngle(segment, angle);
             World.add(partie.engine.world, segment);
+            //sav
             partie.drawnPlatforms.push({
                 x, y,
                 width: length,
                 height: thickness,
                 angle
             });
+            partie.drawnBodies.push(segment);
         }
         //io.to(partieId).emit("map", {colliders : mapData.colliders, exit : mapData.exit});
     }
