@@ -38,6 +38,7 @@ export interface MapData {
     name: string;
     colliders: RectCollider[];
     exit: RectCollider;
+    beginPos: RectCollider;
 }
 
 export interface DrawnPlatform {
@@ -46,6 +47,7 @@ export interface DrawnPlatform {
     width: number;
     height: number;
     angle: number;
+    createdAt?: number;
 }
 
 export interface Partie {
@@ -55,10 +57,13 @@ export interface Partie {
     mapId: string;
     drawnPlatforms: DrawnPlatform[];
     drawnBodies : Matter.Body[];
+    mapBodies: Matter.Body[];
+    exitBody: Matter.Body,
     gameMaster?: number; // L'userId du joueur maitre (qui a al souris)
     isResetting?: boolean;
     platformsChanged?: boolean;
     mapData: MapData;
+    mapIndex: number;
 }
 
 export interface PlayerState {

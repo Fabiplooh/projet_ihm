@@ -70,6 +70,7 @@
   let joinAlertsDone=false;
   let leaderboard = [];
 
+  let playerSize = 40;
   let gameMasterId = null;
   let drawing = false;
   let path = [];
@@ -78,6 +79,10 @@
   //C'est pour voir si on est le game master ou non (affichage du trait de prévisualisation)  
   socket.on("your_id", id => myId = id);
 
+  socket.on("playerSize", data => {
+    playerSize = data
+  });
+  
   socket.on("leaderboard", data => {
     leaderboardDiv.innerHTML = "";
 
@@ -126,7 +131,6 @@
     }
   });
 
-
   socket.on("state", (data) => {
     console.log("[CLIENT] État reçu:", data); 
     joueurs = data;
@@ -151,6 +155,7 @@
   socket.on("player_exit", () => {
     //alert("Vous avez atteint la sortie !");
   });
+
 
   joinBtn.addEventListener("click", async() => {
     const partieId = partieInput.value.trim();
@@ -191,6 +196,7 @@
   document.addEventListener("mouseup", e => {
     drawing = false;
     socket.emit("action_master", path);
+    path = [] 
   });
 
   document.addEventListener("mousemove", e => {
@@ -242,6 +248,8 @@
     joueurs = {};
     drawnPlatforms = data.drawnPlatforms || [];
     path = [];
+    colliders = data.map.colliders;
+    exitZone = data.map.exit;
     
     // Mettre à jour le game master
     gameMasterId = data.gameMaster;
@@ -276,6 +284,7 @@
     if (!joined) return requestAnimationFrame(loop);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    const half = playerSize / 2;
     for (const id in joueurs) {
       const p = joueurs[id];
       ctx.save();
@@ -290,10 +299,11 @@
 
       ctx.fillStyle = color;
 
-      ctx.fillRect(-20, -20, 40, 40);
+      ctx.fillRect(-half, -half, playerSize, playerSize);
       ctx.restore();
     }
 
+    //Previsualisation du dessin
     if (path.length > 1) {
       ctx.beginPath();
       ctx.strokeStyle = "white";
@@ -303,6 +313,7 @@
       ctx.stroke();
     }
 
+    //dessin des platformes dynamique (gameMaster)
     ctx.fillStyle = "#00b8ff";
     for (const p of drawnPlatforms) {
       ctx.save();
@@ -317,6 +328,7 @@
       ctx.restore();
     }
 
+    //Dessin des platformes de la map de base
     ctx.fillStyle = "grey";
     for (const c of colliders) {
           ctx.save();

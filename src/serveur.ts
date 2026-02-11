@@ -27,6 +27,9 @@ const connectSqlite3 = require("connect-sqlite3");
 
 const { Engine, World, Bodies, Body } = Matter;
 
+const BASE_SIZE = 40;
+const BASE_SPEED = 6;
+
 // Maps stockées côté serveur (JSON)
 const maps: Record<string, MapData> = {
     "map1": { 
@@ -38,7 +41,8 @@ const maps: Record<string, MapData> = {
             { x: 400, y: 400, width: 200, height: 20 },
             { x: 250, y: 470, width: 200, height: 20 },
         ],
-        exit: { x: 700, y: 350, width: 50, height: 50 } 
+        exit: { x: 700, y: 350, width: 50, height: 50 },
+        beginPos: { x: 250 , y: 250, width: 10, height: 10 },
     },
     "map2": { 
         name: "Map escalier", 
@@ -48,7 +52,8 @@ const maps: Record<string, MapData> = {
             { x: 150, y: 420, width: 160, height: 20 },
             { x: 300, y: 340, width: 120, height: 20 },
         ],
-        exit: { x: 350, y: 290, width: 50, height: 50 }
+        exit: { x: 350, y: 290, width: 50, height: 50 },
+        beginPos: { x: 42 , y: 42, width: 60, height: 60 },
     },
     "map3": {
         name: "map avec vide",
@@ -65,9 +70,167 @@ const maps: Record<string, MapData> = {
             {x: 330, y: 176, width: 120, height: 5, angle : 40},
             {x: 550, y: 340, width: 250, height: 5, angle : 40},
         ],
-        exit: {x: 750, y: 30, width: 50, height: 50}
+        exit: {x: 750, y: 30, width: 50, height: 50},
+        beginPos: { x: 42 , y: 42, width: 40, height: 40 },
+    },
+    "map4": {
+        name: "map bateau",
+        colliders :[
+            {x: 400, y: 500, width: 500, height: 5},
+            {x: 400, y: 350, width: 5, height: 300},
+            {x: 350, y: 250, width: 5, height: 150, angle : 45},
+            {x: 450, y: 250, width: 5, height: 150, angle : -45},
+            {x: 400, y: 300, width: 200, height: 5},
+            {x: 600, y: 550, width: 5, height: 150, angle : 45},
+            {x: 200, y: 550, width: 5, height: 150, angle : -45},
+        ],
+        exit: {x: 400, y: 40, width: 50, height: 50},
+        beginPos: { x: 300 , y: 450, width: 40, height: 40 },
+    },
+    "map5": {
+        name: "Escaliers montants",
+        colliders: [
+            // Escalier en montée
+            {x: 100, y: 550, width: 150, height: 5},
+            {x: 200, y: 480, width: 150, height: 5},
+            {x: 300, y: 410, width: 150, height: 5},
+            {x: 400, y: 340, width: 150, height: 5},
+            {x: 500, y: 270, width: 150, height: 5},
+            {x: 600, y: 200, width: 150, height: 5},
+            // Plateforme finale
+            {x: 700, y: 130, width: 150, height: 5},
+        ],
+        exit: {x: 730, y: 80, width: 50, height: 50},
+        beginPos: {x: 80, y: 500, width: 40, height: 40},
+    },
+
+    "map6": {
+        name: "Zigzag vertical",
+        colliders: [
+            // Mur gauche
+            {x: 5, y: 300, width: 5, height: 600},
+            // Mur droit
+            {x: 795, y: 300, width: 5, height: 600},
+            // Plateformes en zigzag
+            {x: 150, y: 550, width: 250, height: 5},
+            {x: 550, y: 450, width: 250, height: 5},
+            {x: 150, y: 350, width: 250, height: 5},
+            {x: 550, y: 250, width: 250, height: 5},
+            {x: 150, y: 150, width: 250, height: 5},
+            {x: 550, y: 50, width: 250, height: 5},
+        ],
+        exit: {x: 720, y: 10, width: 50, height: 50},
+        beginPos: {x: 50, y: 500, width: 40, height: 40},
+    },
+
+    "map7": {
+        name: "Labyrinthe simple",
+        colliders: [
+            // Murs extérieurs
+            {x: 400, y: 5, width: 800, height: 5},      // haut
+            {x: 400, y: 595, width: 800, height: 5},    // bas
+            {x: 5, y: 300, width: 5, height: 600},      // gauche
+            {x: 795, y: 300, width: 5, height: 600},    // droite
+            
+            // Murs internes
+            //{x: 200, y: 150, width: 5, height: 300},
+            {x: 400, y: 450, width: 5, height: 300},
+            {x: 300, y: 300, width: 200, height: 5},
+            {x: 600, y: 200, width: 5, height: 400},
+            {x: 500, y: 100, width: 200, height: 5},
+        ],
+        exit: {x: 750, y: 550, width: 50, height: 50},
+        beginPos: {x: 50, y: 50, width: 40, height: 40},
+    },
+
+    "map8": {
+        name: "Saut de foi",
+        colliders: [
+            // Plateforme de départ
+            {x: 100, y: 550, width: 200, height: 5},
+            {x: 100, y: 500, width: 5, height: 100},
+            
+            // Petites plateformes suspendues
+            {x: 350, y: 450, width: 80, height: 5},
+            {x: 450, y: 350, width: 80, height: 5},
+            {x: 350, y: 250, width: 80, height: 5},
+            {x: 550, y: 200, width: 80, height: 5},
+            
+            // Plateforme d'arrivée
+            {x: 700, y: 150, width: 200, height: 5},
+            {x: 795, y: 200, width: 5, height: 100},
+        ],
+        exit: {x: 730, y: 100, width: 50, height: 50},
+        beginPos: {x: 80, y: 500, width: 40, height: 40},
+    },
+
+    "map9": {
+        name: "Tunnel en V",
+        colliders: [
+            // Tunnel descendant gauche
+            {x: 150, y: 200, width: 5, height: 400},
+            {x: 250, y: 200, width: 5, height: 400},
+            //{x: 200, y: 50, width: 200, height: 5},
+            
+            // Fond du V
+            {x: 300, y: 500, width: 200, height: 5, angle: 30},
+            {x: 500, y: 500, width: 200, height: 5, angle: -30},
+            
+            // Tunnel montant droit
+            {x: 550, y: 200, width: 5, height: 400},
+            {x: 650, y: 200, width: 5, height: 400},
+            //{x: 600, y: 50, width: 200, height: 5},
+        ],
+        exit: {x: 600, y: 20, width: 50, height: 50},
+        beginPos: {x: 180, y: 20, width: 40, height: 40},
+    },
+
+    "map10": {
+        name: "Obstacles diagonaux",
+        colliders: [
+            // Sol
+            {x: 400, y: 590, width: 800, height: 5},
+            
+            // Barres diagonales croisées
+            {x: 200, y: 400, width: 5, height: 300, angle: 45},
+            {x: 300, y: 400, width: 5, height: 300, angle: -45},
+            
+            {x: 450, y: 300, width: 5, height: 300, angle: 45},
+            {x: 550, y: 300, width: 5, height: 300, angle: -45},
+            
+            {x: 700, y: 400, width: 5, height: 300, angle: 45},
+            {x: 800, y: 400, width: 5, height: 300, angle: -45},
+            
+            // Plateforme d'arrivée en hauteur
+            {x: 400, y: 50, width: 200, height: 5},
+        ],
+        exit: {x: 400, y: 10, width: 50, height: 50},
+        beginPos: {x: 30, y: 540, width: 40, height: 40},
+    },
+
+    "map11": {
+        name: "Chambre avec piliers",
+        colliders: [
+            // Murs de la chambre
+            {x: 400, y: 10, width: 700, height: 5},     // haut
+            {x: 400, y: 590, width: 700, height: 5},    // bas
+            {x: 50, y: 300, width: 5, height: 580},     // gauche
+            {x: 750, y: 300, width: 5, height: 580},    // droite
+            
+            // Piliers (obstacles)
+            {x: 200, y: 200, width: 60, height: 60},
+            {x: 400, y: 200, width: 60, height: 60},
+            {x: 600, y: 200, width: 60, height: 60},
+            
+            {x: 300, y: 400, width: 60, height: 60},
+            {x: 500, y: 400, width: 60, height: 60},
+        ],
+        exit: {x: 700, y: 550, width: 50, height: 50},
+        beginPos: {x: 100, y: 550, width: 40, height: 40},
     },
 };
+
+const mapOrder = Object.keys(maps);
 
 const KILL_Y = 2000; // à adapter à la taille de ta map
 
@@ -320,6 +483,7 @@ function checkPlayerReachedExit(body: Matter.Body, userId : number, exitBody : M
 
 function createPlatformFromPath(partie: Partie, path : {x:number, y:number}[]) {
     const thickness = 10;
+    const now = Date.now();
 
     for (let i = 1; i < path.length; i++) {
         const p1 = path[i - 1];
@@ -345,7 +509,8 @@ function createPlatformFromPath(partie: Partie, path : {x:number, y:number}[]) {
             x, y,
             width: length,
             height: thickness,
-            angle
+            angle,
+            createdAt: now // Ajouter le timestamp
         });
         partie.drawnBodies.push(segment);
     }
@@ -362,7 +527,7 @@ function resetPartie(partieId: string, finishedPlayers : Set<number>){
     if (oldMaster !== undefined) {
         playersScore.set(oldMaster, 0); 
     }
-    
+    //CHANGEMENT DE GAME MASTER 
     const newIdGameMaster = getLeader();
     partieCourante.gameMaster = newIdGameMaster;
     console.log("Nouveau GameMaster:", newIdGameMaster);
@@ -371,21 +536,51 @@ function resetPartie(partieId: string, finishedPlayers : Set<number>){
     partieCourante.drawnBodies.forEach(b => {
         World.remove(partieCourante.engine.world, b);
     });
+    partieCourante.mapBodies.forEach(c =>{
+        World.remove(partieCourante.engine.world, c);
+    });
     
     partieCourante.drawnPlatforms.length = 0;
     partieCourante.drawnBodies.length = 0;
     partieCourante.platformsChanged = false;
+
+    partieCourante.mapIndex = (partieCourante.mapIndex + 1) % mapOrder.length;
+    const nextMapId = mapOrder[partieCourante.mapIndex];
+    const newMapData = maps[nextMapId];
+    partieCourante.mapId = nextMapId;
+    partieCourante.mapData = newMapData;
     
+    const newMapBodies: Matter.Body[] = [];
+    newMapData.colliders.forEach(g => {
+        const ground = Bodies.rectangle(g.x, g.y, g.width, g.height, { isStatic: true, angle: g.angle ? (g.angle * Math.PI/180) : 0});
+        World.add(partieCourante.engine.world, [ground]);
+        newMapBodies.push(ground);
+    });
+
+    const exitBody = Bodies.rectangle(newMapData.exit.x, newMapData.exit.y, newMapData.exit.width, newMapData.exit.height, { isStatic: true, isSensor: true });
+    partieCourante.exitBody = exitBody;
+    World.add(partieCourante.engine.world, exitBody);
+    newMapBodies.push(exitBody);
+
+    partieCourante.mapBodies = newMapBodies; 
+
+
     finishedPlayers.forEach((userId) => {
         //J'ai rajouter ça pour ramettre uniquement ceux qui sont encore connecté. 
         const socketId = userToSocket.get(userId);
         if (!socketId) return;
 
-        const playerBody = Bodies.rectangle(42, 42, 40, 40, {
-            friction :0,
-            frictionAir :0.01,
-            frictionStatic :0,
-        });
+        const playerBody = Bodies.rectangle(
+            partieCourante.mapData.beginPos.x,
+            partieCourante.mapData.beginPos.y,
+            partieCourante.mapData.beginPos.width,
+            partieCourante.mapData.beginPos.height,
+            {
+                friction :0,
+                frictionAir :0.01,
+                frictionStatic :0,
+            }
+        );
 
         Body.setInertia(playerBody, Infinity);
         partieCourante.joueurs.set(userId, playerBody);
@@ -394,6 +589,8 @@ function resetPartie(partieId: string, finishedPlayers : Set<number>){
         playerInputs.set(userId, { left: false, right: false, jump: false, ah: false});
     });
     finishedPlayers.clear();
+    
+    io.to(partieId).emit("playerSize", partieCourante.mapData.beginPos.width);
    
     io.to(partieId).emit("full_reset", {
         gameMaster: partieCourante.gameMaster,
@@ -446,6 +643,40 @@ function killPlayer(partie: Partie, userId: number, finishedPlayers : Set<number
     World.remove(partie.engine.world, body);
     partie.joueurs.delete(userId);
     playerInputs.delete(userId);
+}
+
+function cleanOldPlatforms(partie: Partie, maxAge: number = 5000) {
+    const now = Date.now();
+    let i = 0;
+    let hasRemoved = false;
+
+    while (i < partie.drawnPlatforms.length) {
+        const platform = partie.drawnPlatforms[i];
+        
+        if (platform.createdAt && (now - platform.createdAt) > maxAge) {
+            // Supprimer du monde physique
+            const body = partie.drawnBodies[i];
+            if (body) {
+                World.remove(partie.engine.world, body);
+            }
+            
+            // Supprimer des arrays
+            partie.drawnPlatforms.splice(i, 1);
+            partie.drawnBodies.splice(i, 1);
+            
+            hasRemoved = true;
+            
+            // Ne pas incrémenter i car l'élément suivant a pris la place de l'actuel
+        } else {
+            // Seulement incrémenter si on n'a pas supprimé
+            i++;
+        }
+    }
+
+    // Notifier les clients qu'il y a eu des changements
+    if (hasRemoved) {
+        partie.platformsChanged = true;
+    }
 }
 
 // Socket.IO
@@ -510,12 +741,16 @@ io.on("connection", (socket) => {
 
             const engine = Engine.create();
             const joueurs = new Map<number, Matter.Body>();
+            const mapBodies: Matter.Body[] = [];
+            const finishedPlayers = new Set<number>();
 
             // Créer le sol
             mapData.colliders.forEach(g => {
                 const ground = Bodies.rectangle(g.x, g.y, g.width, g.height, { isStatic: true, angle: g.angle ? (g.angle * Math.PI / 180) : 0 });
                 World.add(engine.world, [ground]);
+                mapBodies.push(ground);
             });
+
             //creer le bord de map
             const CANVAS_WIDTH = 800;
             const CANVAS_HEIGHT = 600;
@@ -530,6 +765,7 @@ io.on("connection", (socket) => {
                 Bodies.rectangle(CANVAS_WIDTH / 2, 0, CANVAS_WIDTH, WALL_THICKNESS, { isStatic: true })
             ];
             World.add(engine.world, walls);
+            //mapBodies.push(...walls);
 
             const exitBody = Bodies.rectangle(
                 mapData.exit.x,
@@ -540,19 +776,21 @@ io.on("connection", (socket) => {
                     isStatic: true,
                     isSensor : true, //pas de collision
                 }
-            )
-            World.add(engine.world, [exitBody])
-            const finishedPlayers = new Set<number>();
+            );
+            World.add(engine.world, [exitBody]);
+            mapBodies.push(exitBody);
             
-
-
             //On met a jour l'etat du monde : la vitesse du joueur en fonction de son input (donc de la Hashmap PlayerInput)
             const interval = setInterval(() => {
                 const partieCourante = parties.get(partieId);
                 if (!partieCourante) return;
                 if (partieCourante.isResetting) return;
       
-                const HORIZONTAL_SPEED = 6;
+                cleanOldPlatforms(partieCourante, 5000);
+
+
+                const SPEED_FACTOR = Math.max(0.5, Math.min(2, BASE_SIZE / partieCourante.mapData.beginPos.width));
+                const HORIZONTAL_SPEED = BASE_SPEED * SPEED_FACTOR; 
                 const STOP_MOUVEMENT = 0.8;
 
                 const toRemove: number[] = [];
@@ -561,7 +799,7 @@ io.on("connection", (socket) => {
                     const input = playerInputs.get(userId);
                     if (!input) return; 
 
-                    if (checkPlayerReachedExit(body, userId, exitBody)){
+                    if (checkPlayerReachedExit(body, userId, partieCourante.exitBody)){
                         let curScore = playersScore.get(userId);
                         if (curScore === undefined){
                             console.warn("Score manquant pour", userId);
@@ -713,12 +951,14 @@ io.on("connection", (socket) => {
                 mapId, 
                 drawnPlatforms: [], 
                 drawnBodies: [],
+                mapBodies,
+                exitBody,
                 gameMaster : userId,
                 isResetting: false,
                 platformsChanged: false,
                 mapData,
+                mapIndex : mapOrder.indexOf(mapId),
             };
-
             //partie.gameMaster = userId;   // le premier devient Game Master
             console.log("Nouveau GameMaster:", userId);
             io.to(partieId).emit("game_master", userId);
@@ -736,11 +976,18 @@ io.on("connection", (socket) => {
         }
 
         // Ajouter le joueur a la partie :(dans tous les cas si on a une connection)
-        const playerBody = Bodies.rectangle(42, 42, 40, 40,{
-            friction :0,
-            frictionAir :0.01,
-            frictionStatic :0,
-        });
+        const playerBody = Bodies.rectangle(
+            partie.mapData.beginPos.x,
+            partie.mapData.beginPos.y,
+            partie.mapData.beginPos.width,
+            partie.mapData.beginPos.height,
+            {
+                friction :0,
+                frictionAir :0.01,
+                frictionStatic :0,
+            }
+        );
+        socket.emit("playerSize", partie.mapData.beginPos.width);
         // Empêche la rotation (important pour un joueur)
         Body.setInertia(playerBody, Infinity);
         partie.joueurs.set(userId, playerBody);
@@ -775,9 +1022,9 @@ io.on("connection", (socket) => {
             }
             ahCooldown.set(userId, now + AH_COOLDOWN_MS); // on remet le cooldown vu qu'il vient de l'utiliser.
             input.ah = true;
-            socket.emit("ah_ok", {cooldown : AH_COOLDOWN_MS});
-        
-
+            socket.emit("ah_ok", {cooldown : AH_COOLDOWN_MS}); //pour gerer le cooldown du gars précisément
+            //partieCourante = parties.get(userId);
+            //io.to(partieId).emit("ah_ok", { userId }); // pour l'affichage pour tous
         }
     });
 
@@ -826,9 +1073,6 @@ io.on("connection", (socket) => {
 });
 
 // Démarrer le serveur - connaitre ip : hostname -I
-/*httpServer.listen(port, () => {
-    console.log(`[server]: Server is running at http://localhost:${port}`);
-});*/
 httpServer.listen(port, '0.0.0.0', () => {
     console.log(`[server]: Server is running at http://0.0.0.0:${port}`);
     console.log(`[server]: Accessible sur le réseau local à http://localhost:${port}`);
