@@ -333,7 +333,6 @@ function createPlatformFromPath(partie: Partie, path : {x:number, y:number}[]) {
 function resetPartie(partieId: string, finishedPlayers : Set<number>){
     const partieCourante = parties.get(partieId); 
     if (!partieCourante) return;
-    updateLeaderboard(partieId);
     partieCourante.isResetting = true;
 
     console.log("Tous les joueurs ont fini ! Rechargement des joueurs sur la partie :", partieId);
@@ -354,6 +353,7 @@ function resetPartie(partieId: string, finishedPlayers : Set<number>){
     
     partieCourante.drawnPlatforms.length = 0;
     partieCourante.drawnBodies.length = 0;
+    partieCourante.platformsChanged = false;
     
     finishedPlayers.forEach((userId) => {
         //J'ai rajouter ça pour ramettre uniquement ceux qui sont encore connecté. 
@@ -376,10 +376,12 @@ function resetPartie(partieId: string, finishedPlayers : Set<number>){
    
     io.to(partieId).emit("full_reset", {
         gameMaster: partieCourante.gameMaster,
-        drawnPlatforms: partieCourante.drawnPlatforms
+        drawnPlatforms: partieCourante.drawnPlatforms,
+        map: {colliders: partieCourante.mapData.colliders, exit: partieCourante.mapData.exit}
     });
     
     partieCourante.isResetting = false;
+    updateLeaderboard(partieId);
 }
 
 function getLeader(): number | undefined {
@@ -528,13 +530,10 @@ io.on("connection", (socket) => {
                 const STOP_MOUVEMENT = 0.8;
 
                 const toRemove: number[] = [];
-                let shouldReset = false;
 
                 joueurs.forEach((body, userId) => {
                     const input = playerInputs.get(userId);
-                    if (!input){
-                        return;
-                    } 
+                    if (!input) return; 
 
                     if (checkPlayerReachedExit(body, userId, exitBody)){
                         let curScore = playersScore.get(userId);
@@ -668,26 +667,17 @@ io.on("connection", (socket) => {
                         pseudoPlayer : playerPseudos.get(userId) || "Joueur", //pseudo par defaut si jamais
                     };
                 });
-                /*const leaderboard = [];
-                for (const [userId, score] of playersScore.entries()) {
-                    leaderboard.push({
-                        userId,
-                        score,
-                        pseudo: playerPseudos.get(userId) || "?"
-                    });
-                }
-                leaderboard.sort((a, b) => b.score - a.score);
-                io.to(partieId).emit("leaderboard", {
-                    leaderboard,
-                    gameMaster: partieCourante.gameMaster
-                });*/
 
                 // Ici on envoie bien qu'au gens de la room partieID
                 io.to(partieId).emit("state", etat);
                 //on l'a renvoie pour les nouveaux joueurs qui rejoignent 
-                io.to(partieId).emit("map", {colliders : mapData.colliders, exit : mapData.exit});
+                //io.to(partieId).emit("map", {colliders : mapData.colliders, exit : mapData.exit});
 
-                io.to(partieId).emit("drawnPlatforms", partieCourante.drawnPlatforms);
+                //io.to(partieId).emit("drawnPlatforms", partieCourante.drawnPlatforms);
+                if (partieCourante.platformsChanged) {
+                    io.to(partieId).emit("drawnPlatforms", partieCourante.drawnPlatforms);
+                    partieCourante.platformsChanged = false;
+                }
             }, 16);
 
             partie = { 
@@ -696,21 +686,27 @@ io.on("connection", (socket) => {
                 interval, 
                 mapId, 
                 drawnPlatforms: [], 
-                drawnBodies: []
-                
+                drawnBodies: [],
+                gameMaster : userId,
+                isResetting: false,
+                platformsChanged: false,
+                mapData,
             };
 
-            partie.gameMaster = userId;   // le premier devient Game Master
+            //partie.gameMaster = userId;   // le premier devient Game Master
             console.log("Nouveau GameMaster:", userId);
             io.to(partieId).emit("game_master", userId);
 
             parties.set(partieId, partie);
+            socket.emit("map", {colliders: mapData.colliders, exit: mapData.exit});
         }
         else {
             socket.emit("connection_not_first");
             if (partie.gameMaster !== undefined) {
                 socket.emit("game_master", partie.gameMaster);
             }
+            socket.emit("map",{colliders: partie.mapData.colliders, exit: partie.mapData.exit});
+            socket.emit("drawnPlatforms", partie.drawnPlatforms);
         }
 
         // Ajouter le joueur a la partie :(dans tous les cas si on a une connection)
@@ -767,6 +763,7 @@ io.on("connection", (socket) => {
             if (partie.gameMaster !== userId) continue;
 
             createPlatformFromPath(partie, path); 
+            partie.platformsChanged = true;
         }
     });
 

@@ -56,7 +56,9 @@ export interface Partie {
     drawnPlatforms: DrawnPlatform[];
     drawnBodies : Matter.Body[];
     gameMaster?: number; // L'userId du joueur maitre (qui a al souris)
-    isResetting?: boolean; 
+    isResetting?: boolean;
+    platformsChanged?: boolean;
+    mapData: MapData;
 }
 
 export interface PlayerState {
