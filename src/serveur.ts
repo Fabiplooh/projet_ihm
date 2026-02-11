@@ -145,7 +145,7 @@ app.use((req, res, next) => {
 
     // Vérifier si connecté pour toutes les autres routes
     if (req.method === "GET" && !req.session.userId && req.path !== "/login") {
-        res.redirect("/login");
+    res.redirect("/login");
         return;
     }
 

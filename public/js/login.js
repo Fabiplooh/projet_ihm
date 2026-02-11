@@ -93,4 +93,25 @@
     showResult('regResult', res.message, res.ok);    
   };
 
+
+  document.getElementById('btnLogin').onclick = async () => {
+    const identifiant = document.getElementById('identifiant').value.trim();
+    const password = document.getElementById('loginPassword').value.trim();
+
+    if (!identifiant || !password){
+      showResult('loginResult', 'Tous les champs sont obligatoires !', false);
+      return;
+    }
+
+    const res = await api('/auth/login', { identifiant, password });
+    
+    if (res.ok) {
+        console.log(res.message);
+        // Redirection vers /partie après connexion réussie
+        window.location.href = "/partie";
+    } else {
+        alert(res.message);
+    }
+
+  };
 })();
