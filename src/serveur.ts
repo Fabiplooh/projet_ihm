@@ -49,7 +49,7 @@ const maps: Record<string, MapData> = {
             { x: 300, y: 340, width: 120, height: 20 },
         ],
         exit: { x: 350, y: 290, width: 50, height: 50 },
-        beginPos: { x: 42 , y: 42, width: 40, height: 40 },
+        beginPos: { x: 42 , y: 42, width: 60, height: 60 },
     },
     "map3": {
         name: "map avec vide",
@@ -68,6 +68,161 @@ const maps: Record<string, MapData> = {
         ],
         exit: {x: 750, y: 30, width: 50, height: 50},
         beginPos: { x: 42 , y: 42, width: 40, height: 40 },
+    },
+    "map4": {
+        name: "map bateau",
+        colliders :[
+            {x: 400, y: 500, width: 500, height: 5},
+            {x: 400, y: 350, width: 5, height: 300},
+            {x: 350, y: 250, width: 5, height: 150, angle : 45},
+            {x: 450, y: 250, width: 5, height: 150, angle : -45},
+            {x: 400, y: 300, width: 200, height: 5},
+            {x: 600, y: 550, width: 5, height: 150, angle : 45},
+            {x: 200, y: 550, width: 5, height: 150, angle : -45},
+        ],
+        exit: {x: 400, y: 40, width: 50, height: 50},
+        beginPos: { x: 300 , y: 450, width: 40, height: 40 },
+    },
+    "map5": {
+        name: "Escaliers montants",
+        colliders: [
+            // Escalier en montée
+            {x: 100, y: 550, width: 150, height: 5},
+            {x: 200, y: 480, width: 150, height: 5},
+            {x: 300, y: 410, width: 150, height: 5},
+            {x: 400, y: 340, width: 150, height: 5},
+            {x: 500, y: 270, width: 150, height: 5},
+            {x: 600, y: 200, width: 150, height: 5},
+            // Plateforme finale
+            {x: 700, y: 130, width: 150, height: 5},
+        ],
+        exit: {x: 730, y: 80, width: 50, height: 50},
+        beginPos: {x: 80, y: 500, width: 40, height: 40},
+    },
+
+    "map6": {
+        name: "Zigzag vertical",
+        colliders: [
+            // Mur gauche
+            {x: 5, y: 300, width: 5, height: 600},
+            // Mur droit
+            {x: 795, y: 300, width: 5, height: 600},
+            // Plateformes en zigzag
+            {x: 150, y: 550, width: 250, height: 5},
+            {x: 550, y: 450, width: 250, height: 5},
+            {x: 150, y: 350, width: 250, height: 5},
+            {x: 550, y: 250, width: 250, height: 5},
+            {x: 150, y: 150, width: 250, height: 5},
+            {x: 550, y: 50, width: 250, height: 5},
+        ],
+        exit: {x: 720, y: 10, width: 50, height: 50},
+        beginPos: {x: 50, y: 500, width: 40, height: 40},
+    },
+
+    "map7": {
+        name: "Labyrinthe simple",
+        colliders: [
+            // Murs extérieurs
+            {x: 400, y: 5, width: 800, height: 5},      // haut
+            {x: 400, y: 595, width: 800, height: 5},    // bas
+            {x: 5, y: 300, width: 5, height: 600},      // gauche
+            {x: 795, y: 300, width: 5, height: 600},    // droite
+            
+            // Murs internes
+            //{x: 200, y: 150, width: 5, height: 300},
+            {x: 400, y: 450, width: 5, height: 300},
+            {x: 300, y: 300, width: 200, height: 5},
+            {x: 600, y: 200, width: 5, height: 400},
+            {x: 500, y: 100, width: 200, height: 5},
+        ],
+        exit: {x: 750, y: 550, width: 50, height: 50},
+        beginPos: {x: 50, y: 50, width: 40, height: 40},
+    },
+
+    "map8": {
+        name: "Saut de foi",
+        colliders: [
+            // Plateforme de départ
+            {x: 100, y: 550, width: 200, height: 5},
+            {x: 100, y: 500, width: 5, height: 100},
+            
+            // Petites plateformes suspendues
+            {x: 350, y: 450, width: 80, height: 5},
+            {x: 450, y: 350, width: 80, height: 5},
+            {x: 350, y: 250, width: 80, height: 5},
+            {x: 550, y: 200, width: 80, height: 5},
+            
+            // Plateforme d'arrivée
+            {x: 700, y: 150, width: 200, height: 5},
+            {x: 795, y: 200, width: 5, height: 100},
+        ],
+        exit: {x: 730, y: 100, width: 50, height: 50},
+        beginPos: {x: 80, y: 500, width: 40, height: 40},
+    },
+
+    "map9": {
+        name: "Tunnel en V",
+        colliders: [
+            // Tunnel descendant gauche
+            {x: 150, y: 200, width: 5, height: 400},
+            {x: 250, y: 200, width: 5, height: 400},
+            //{x: 200, y: 50, width: 200, height: 5},
+            
+            // Fond du V
+            {x: 300, y: 500, width: 200, height: 5, angle: 30},
+            {x: 500, y: 500, width: 200, height: 5, angle: -30},
+            
+            // Tunnel montant droit
+            {x: 550, y: 200, width: 5, height: 400},
+            {x: 650, y: 200, width: 5, height: 400},
+            //{x: 600, y: 50, width: 200, height: 5},
+        ],
+        exit: {x: 600, y: 20, width: 50, height: 50},
+        beginPos: {x: 180, y: 20, width: 40, height: 40},
+    },
+
+    "map10": {
+        name: "Obstacles diagonaux",
+        colliders: [
+            // Sol
+            {x: 400, y: 590, width: 800, height: 5},
+            
+            // Barres diagonales croisées
+            {x: 200, y: 400, width: 5, height: 300, angle: 45},
+            {x: 300, y: 400, width: 5, height: 300, angle: -45},
+            
+            {x: 450, y: 300, width: 5, height: 300, angle: 45},
+            {x: 550, y: 300, width: 5, height: 300, angle: -45},
+            
+            {x: 700, y: 400, width: 5, height: 300, angle: 45},
+            {x: 800, y: 400, width: 5, height: 300, angle: -45},
+            
+            // Plateforme d'arrivée en hauteur
+            {x: 400, y: 50, width: 200, height: 5},
+        ],
+        exit: {x: 400, y: 10, width: 50, height: 50},
+        beginPos: {x: 30, y: 540, width: 40, height: 40},
+    },
+
+    "map11": {
+        name: "Chambre avec piliers",
+        colliders: [
+            // Murs de la chambre
+            {x: 400, y: 10, width: 700, height: 5},     // haut
+            {x: 400, y: 590, width: 700, height: 5},    // bas
+            {x: 50, y: 300, width: 5, height: 580},     // gauche
+            {x: 750, y: 300, width: 5, height: 580},    // droite
+            
+            // Piliers (obstacles)
+            {x: 200, y: 200, width: 60, height: 60},
+            {x: 400, y: 200, width: 60, height: 60},
+            {x: 600, y: 200, width: 60, height: 60},
+            
+            {x: 300, y: 400, width: 60, height: 60},
+            {x: 500, y: 400, width: 60, height: 60},
+        ],
+        exit: {x: 700, y: 550, width: 50, height: 50},
+        beginPos: {x: 100, y: 550, width: 40, height: 40},
     },
 };
 
