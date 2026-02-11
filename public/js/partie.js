@@ -186,6 +186,7 @@
   document.addEventListener("mouseup", e => {
     drawing = false;
     socket.emit("action_master", path);
+    path = [] 
   });
 
   document.addEventListener("mousemove", e => {
@@ -291,6 +292,7 @@
       ctx.restore();
     }
 
+    //Previsualisation du dessin
     if (path.length > 1) {
       ctx.beginPath();
       ctx.strokeStyle = "white";
@@ -300,6 +302,7 @@
       ctx.stroke();
     }
 
+    //dessin des platformes dynamique (gameMaster)
     ctx.fillStyle = "#00b8ff";
     for (const p of drawnPlatforms) {
       ctx.save();
@@ -314,6 +317,7 @@
       ctx.restore();
     }
 
+    //Dessin des platformes de la map de base
     ctx.fillStyle = "grey";
     for (const c of colliders) {
           ctx.save();

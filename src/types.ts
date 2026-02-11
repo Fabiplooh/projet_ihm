@@ -46,6 +46,7 @@ export interface DrawnPlatform {
     width: number;
     height: number;
     angle: number;
+    createdAt?: number;
 }
 
 export interface Partie {

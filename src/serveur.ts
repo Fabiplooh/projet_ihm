@@ -307,6 +307,7 @@ function checkPlayerReachedExit(body: Matter.Body, userId : number, exitBody : M
 
 function createPlatformFromPath(partie: Partie, path : {x:number, y:number}[]) {
     const thickness = 10;
+    const now = Date.now();
 
     for (let i = 1; i < path.length; i++) {
         const p1 = path[i - 1];
@@ -332,7 +333,8 @@ function createPlatformFromPath(partie: Partie, path : {x:number, y:number}[]) {
             x, y,
             width: length,
             height: thickness,
-            angle
+            angle,
+            createdAt: now // Ajouter le timestamp
         });
         partie.drawnBodies.push(segment);
     }
@@ -460,6 +462,40 @@ function killPlayer(partie: Partie, userId: number, finishedPlayers : Set<number
     playerInputs.delete(userId);
 }
 
+function cleanOldPlatforms(partie: Partie, maxAge: number = 5000) {
+    const now = Date.now();
+    let i = 0;
+    let hasRemoved = false;
+
+    while (i < partie.drawnPlatforms.length) {
+        const platform = partie.drawnPlatforms[i];
+        
+        if (platform.createdAt && (now - platform.createdAt) > maxAge) {
+            // Supprimer du monde physique
+            const body = partie.drawnBodies[i];
+            if (body) {
+                World.remove(partie.engine.world, body);
+            }
+            
+            // Supprimer des arrays
+            partie.drawnPlatforms.splice(i, 1);
+            partie.drawnBodies.splice(i, 1);
+            
+            hasRemoved = true;
+            
+            // Ne pas incrémenter i car l'élément suivant a pris la place de l'actuel
+        } else {
+            // Seulement incrémenter si on n'a pas supprimé
+            i++;
+        }
+    }
+
+    // Notifier les clients qu'il y a eu des changements
+    if (hasRemoved) {
+        partie.platformsChanged = true;
+    }
+}
+
 // Socket.IO
 // On a creer un serveur http et on connecte les joueurs (client html) qui se connecte sur la page partie. Ils sont ensuite mis dans la partie
 // correspondant à leur demande et sont connecté via socket avec socket.io
@@ -562,6 +598,8 @@ io.on("connection", (socket) => {
                 if (!partieCourante) return;
                 if (partieCourante.isResetting) return;
       
+                cleanOldPlatforms(partieCourante, 5000);
+
                 const HORIZONTAL_SPEED = 6;
                 const STOP_MOUVEMENT = 0.8;
 
@@ -787,9 +825,9 @@ io.on("connection", (socket) => {
             }
             ahCooldown.set(userId, now + AH_COOLDOWN_MS); // on remet le cooldown vu qu'il vient de l'utiliser.
             input.ah = true;
-            socket.emit("ah_ok", {cooldown : AH_COOLDOWN_MS});
-        
-
+            socket.emit("ah_ok", {cooldown : AH_COOLDOWN_MS}); //pour gerer le cooldown du gars précisément
+            //partieCourante = parties.get(userId);
+            //io.to(partieId).emit("ah_ok", { userId }); // pour l'affichage pour tous
         }
     });
 
