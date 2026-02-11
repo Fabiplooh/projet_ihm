@@ -23,7 +23,7 @@
 
   const backBtn = document.getElementById("backBtn");
   backBtn.onclick = async () => {
-    window.location.href = "/partie.html";
+    window.location.href = "/partie";
   };
 
   // Comportement profil
@@ -35,6 +35,14 @@
   // Comportement déconnexion
   document.getElementById('btnLogout').onclick = async () => {
     const res = await api('/auth/logout', {});
-    showResult('logoutResult', res.message || "Déconnecté", res.ok);
+
+    if (res.ok) {
+        console.log(res.message);
+        // Redirection vers /partie après connexion réussie
+        window.location.href = "/login";
+    } else {
+        alert(res.message);
+    }
+
   };
 })();

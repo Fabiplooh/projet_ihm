@@ -127,7 +127,7 @@ app.use((req, res, next) => {
     }
 
     // Vérifier si connecté pour toutes les autres routes
-    if (req.method === "GET" &&!req.session.userId && req.path !== "/login") {
+    if (req.method === "GET" && !req.session.userId && req.path !== "/login") {
         res.redirect("/login");
         return;
     }
@@ -137,17 +137,8 @@ app.use((req, res, next) => {
 
 // Page d'accueil
 app.get("/", (req: Request, res: Response) => {
-    res.send(`<html>
-               <head>
-                    <link rel="stylesheet" href="roulette.css" />
-                    <title> Coucou les meef </title>
-               </head>
-               <body> 
-                   <h1>Hopla</h1>
-               </body>
-            </html> 
-           `
-    );
+    res.redirect("/partie");
+        return;
 });
 
 // Page partie
