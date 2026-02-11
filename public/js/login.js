@@ -3,15 +3,24 @@
   function showResult(elementId, message, isSuccess = true) {
     document.querySelectorAll('.result').forEach(elem => {
       elem.classList.remove('visible', 'error');
-      elem.textContent = '';
+      const text = elem.querySelector('.result-text');
+      if (text) text.textContent = '';
+      const actions = elem.querySelector('.result-actions');
+      if (actions) actions.style.display = 'none';
     });
 
     const element = document.getElementById(elementId);
-    element.textContent = message;
+    const textElem = element.querySelector('.result-text') || element;
+    textElem.textContent = message;
     if (isSuccess){
       element.className = 'result visible';
     } else {
       element.className = 'result error visible';
+    }
+    const actions = element.querySelector('.result-actions');
+    if (actions) {
+      actions.style.display = isSuccess ? '' : 'none';
+      actions.classList.toggle('visible', !!isSuccess);
     }
   }
 
@@ -22,20 +31,19 @@
       body: JSON.stringify(data),
     }).then(r => r.json());
 
-  document.getElementById('btnRegister').onclick = async () => {
-    const identifiant = document.getElementById('regId').value.trim();
-    const password = document.getElementById('regPassword').value.trim();
-    const pseudo = document.getElementById('regPseudo').value.trim();
-    const color = document.getElementById('regColor').value;
+  
+  // Ajout d'un boutton "Rejoindre la partie" dans la div d'inscription
+  const btnJoinGame = document.createElement("button");
+  btnJoinGame.id = "btn_joinGame"
+  btnJoinGame.className = "greenBtn";
+  btnJoinGame.appendChild(document.createTextNode("Rejoindre la partie"));
+  btnJoinGame.addEventListener("click", () => {
+    window.location.href = "/partie";
+  });
 
-    if (!identifiant || !password || !pseudo){
-      showResult('regResult', 'Tous les champs sont obligatoires !', false);
-      return;
-    }
-
-    const res = await api('/auth/register', { identifiant, password, pseudo, color });
-    showResult('regResult', res.message, res.ok);
-  };
+  const regActions = document.getElementById("regActions");
+  if (regActions) regActions.appendChild(btnJoinGame);
+  
 
   document.getElementById('btnLogin').onclick = async () => {
     const identifiant = document.getElementById('identifiant').value.trim();
@@ -57,4 +65,20 @@
     }
 
   };
+
+  document.getElementById('btnRegister').onclick = async () => {
+    const identifiant = document.getElementById('regId').value.trim();
+    const password = document.getElementById('regPassword').value.trim();
+    const pseudo = document.getElementById('regPseudo').value.trim();
+    const color = document.getElementById('regColor').value;
+
+    if (!identifiant || !password || !pseudo){
+      showResult('regResult', 'Tous les champs sont obligatoires !', false);
+      return;
+    }
+
+    const res = await api('/auth/register', { identifiant, password, pseudo, color });
+    showResult('regResult', res.message, res.ok);    
+  };
+
 })();

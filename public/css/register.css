@@ -73,11 +73,11 @@ button:hover {
     background: #cc0000;
 }
 
-#backBtn {
+.greenBtn {
     background: #57e389;
 }
 
-#backBtn:hover {
+.greenBtn:hover {
     background: #33d17a;
 }
 
@@ -93,6 +93,18 @@ button:hover {
 
 .result.visible {
     display: block;  /* Pour le rendre visible dans la classe result visible */
+}
+
+.result-actions {
+    margin-top: 10px;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    display : none; /*On le cachge par défaut*/
+}
+
+.result-actions.visible {
+    display : block;
 }
 
 .error {
