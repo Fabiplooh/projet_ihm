@@ -26,6 +26,9 @@ const connectSqlite3 = require("connect-sqlite3");
 
 const { Engine, World, Bodies, Body } = Matter;
 
+const BASE_SIZE = 40;
+const BASE_SPEED = 6;
+
 // Maps stockées côté serveur (JSON)
 const maps: Record<string, MapData> = {
     "map1": { 
@@ -765,7 +768,9 @@ io.on("connection", (socket) => {
       
                 cleanOldPlatforms(partieCourante, 5000);
 
-                const HORIZONTAL_SPEED = 6;
+
+                const SPEED_FACTOR = Math.max(0.5, Math.min(2, BASE_SIZE / partieCourante.mapData.beginPos.width));
+                const HORIZONTAL_SPEED = BASE_SPEED * SPEED_FACTOR; 
                 const STOP_MOUVEMENT = 0.8;
 
                 const toRemove: number[] = [];
@@ -1048,9 +1053,6 @@ io.on("connection", (socket) => {
 });
 
 // Démarrer le serveur - connaitre ip : hostname -I
-/*httpServer.listen(port, () => {
-    console.log(`[server]: Server is running at http://localhost:${port}`);
-});*/
 httpServer.listen(port, '0.0.0.0', () => {
     console.log(`[server]: Server is running at http://0.0.0.0:${port}`);
     console.log(`[server]: Accessible sur le réseau local à http://localhost:${port}`);
