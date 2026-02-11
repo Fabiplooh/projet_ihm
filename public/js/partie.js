@@ -122,11 +122,6 @@
     }
   });
 
-  socket.on("map", (data) => { 
-    colliders = data; 
-    console.log("[CLIENT] Map reçue:", data);
-  });
-
   socket.on("state", (data) => {
     console.log("[CLIENT] État reçu:", data); 
     joueurs = data;
@@ -242,6 +237,8 @@
     joueurs = {};
     drawnPlatforms = data.drawnPlatforms || [];
     path = [];
+    colliders = data.map.colliders;
+    exitZone = data.map.exit;
     
     // Mettre à jour le game master
     gameMasterId = data.gameMaster;

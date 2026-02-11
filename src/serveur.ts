@@ -68,6 +68,8 @@ const maps: Record<string, MapData> = {
     },
 };
 
+const mapOrder = Object.keys(maps);
+
 const KILL_Y = 2000; // à adapter à la taille de ta map
 
 const socketToUser = new Map<string, number>();
@@ -347,7 +349,7 @@ function resetPartie(partieId: string, finishedPlayers : Set<number>){
     if (oldMaster !== undefined) {
         playersScore.set(oldMaster, 0); 
     }
-    
+    //CHANGEMENT DE GAME MASTER 
     const newIdGameMaster = getLeader();
     partieCourante.gameMaster = newIdGameMaster;
     console.log("Nouveau GameMaster:", newIdGameMaster);
@@ -356,11 +358,36 @@ function resetPartie(partieId: string, finishedPlayers : Set<number>){
     partieCourante.drawnBodies.forEach(b => {
         World.remove(partieCourante.engine.world, b);
     });
+    partieCourante.mapBodies.forEach(c =>{
+        World.remove(partieCourante.engine.world, c);
+    });
     
     partieCourante.drawnPlatforms.length = 0;
     partieCourante.drawnBodies.length = 0;
     partieCourante.platformsChanged = false;
+
+    partieCourante.mapIndex = (partieCourante.mapIndex + 1) % mapOrder.length;
+    const nextMapId = mapOrder[partieCourante.mapIndex];
+    const newMapData = maps[nextMapId];
+    partieCourante.mapId = nextMapId;
+    partieCourante.mapData = newMapData;
     
+    const newMapBodies: Matter.Body[] = [];
+    newMapData.colliders.forEach(g => {
+        const ground = Bodies.rectangle(g.x, g.y, g.width, g.height, { isStatic: true, angle: g.angle ? (g.angle * Math.PI/180) : 0});
+        World.add(partieCourante.engine.world, [ground]);
+        newMapBodies.push(ground);
+    });
+
+    const exitBody = Bodies.rectangle(newMapData.exit.x, newMapData.exit.y, newMapData.exit.width, newMapData.exit.height, { isStatic: true, isSensor: true });
+    partieCourante.exitBody = exitBody;
+    World.add(partieCourante.engine.world, exitBody);
+    newMapBodies.push(exitBody);
+
+    partieCourante.mapBodies = newMapBodies;
+    
+
+
     finishedPlayers.forEach((userId) => {
         //J'ai rajouter ça pour ramettre uniquement ceux qui sont encore connecté. 
         const socketId = userToSocket.get(userId);
@@ -490,12 +517,16 @@ io.on("connection", (socket) => {
 
             const engine = Engine.create();
             const joueurs = new Map<number, Matter.Body>();
+            const mapBodies: Matter.Body[] = [];
+            const finishedPlayers = new Set<number>();
 
             // Créer le sol
             mapData.colliders.forEach(g => {
                 const ground = Bodies.rectangle(g.x, g.y, g.width, g.height, { isStatic: true, angle: g.angle ? (g.angle * Math.PI / 180) : 0 });
                 World.add(engine.world, [ground]);
+                mapBodies.push(ground);
             });
+
             //creer le bord de map
             const CANVAS_WIDTH = 800;
             const CANVAS_HEIGHT = 600;
@@ -510,6 +541,7 @@ io.on("connection", (socket) => {
                 Bodies.rectangle(CANVAS_WIDTH / 2, 0, CANVAS_WIDTH, WALL_THICKNESS, { isStatic: true })
             ];
             World.add(engine.world, walls);
+            //mapBodies.push(...walls);
 
             const exitBody = Bodies.rectangle(
                 mapData.exit.x,
@@ -520,12 +552,10 @@ io.on("connection", (socket) => {
                     isStatic: true,
                     isSensor : true, //pas de collision
                 }
-            )
-            World.add(engine.world, [exitBody])
-            const finishedPlayers = new Set<number>();
+            );
+            World.add(engine.world, [exitBody]);
+            mapBodies.push(exitBody);
             
-
-
             //On met a jour l'etat du monde : la vitesse du joueur en fonction de son input (donc de la Hashmap PlayerInput)
             const interval = setInterval(() => {
                 const partieCourante = parties.get(partieId);
@@ -541,7 +571,7 @@ io.on("connection", (socket) => {
                     const input = playerInputs.get(userId);
                     if (!input) return; 
 
-                    if (checkPlayerReachedExit(body, userId, exitBody)){
+                    if (checkPlayerReachedExit(body, userId, partieCourante.exitBody)){
                         let curScore = playersScore.get(userId);
                         if (curScore === undefined){
                             console.warn("Score manquant pour", userId);
@@ -693,12 +723,14 @@ io.on("connection", (socket) => {
                 mapId, 
                 drawnPlatforms: [], 
                 drawnBodies: [],
+                mapBodies,
+                exitBody,
                 gameMaster : userId,
                 isResetting: false,
                 platformsChanged: false,
                 mapData,
+                mapIndex : mapOrder.indexOf(mapId),
             };
-
             //partie.gameMaster = userId;   // le premier devient Game Master
             console.log("Nouveau GameMaster:", userId);
             io.to(partieId).emit("game_master", userId);
