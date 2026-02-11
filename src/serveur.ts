@@ -614,6 +614,19 @@ io.on("connection", (socket) => {
                         pseudoPlayer : playerPseudos.get(userId) || "Joueur", //pseudo par defaut si jamais
                     };
                 });
+                const leaderboard = [];
+                for (const [userId, score] of playersScore.entries()) {
+                    leaderboard.push({
+                        userId,
+                        score,
+                        pseudo: playerPseudos.get(userId) || "?"
+                    });
+                }
+                leaderboard.sort((a, b) => b.score - a.score);
+                io.to(partieId).emit("leaderboard", {
+                    leaderboard,
+                    gameMaster: partieCourante.gameMaster
+                });
 
                 // Ici on envoie bien qu'au gens de la room partieID
                 io.to(partieId).emit("state", etat);
