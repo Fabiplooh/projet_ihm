@@ -66,6 +66,7 @@
   let joinAlertsDone=false;
   let leaderboard = [];
 
+  let playerSize = 40;
   let gameMasterId = null;
   let drawing = false;
   let path = [];
@@ -74,6 +75,10 @@
   //C'est pour voir si on est le game master ou non (affichage du trait de prévisualisation)  
   socket.on("your_id", id => myId = id);
 
+  socket.on("playerSize", data => {
+    playerSize = data
+  });
+  
   socket.on("leaderboard", data => {
     leaderboardDiv.innerHTML = "";
 
@@ -146,6 +151,7 @@
   socket.on("player_exit", () => {
     //alert("Vous avez atteint la sortie !");
   });
+
 
   joinBtn.addEventListener("click", async() => {
     const partieId = partieInput.value.trim();
@@ -274,6 +280,7 @@
     if (!joined) return requestAnimationFrame(loop);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    const half = playerSize / 2;
     for (const id in joueurs) {
       const p = joueurs[id];
       ctx.save();
@@ -288,7 +295,7 @@
 
       ctx.fillStyle = color;
 
-      ctx.fillRect(-20, -20, 40, 40);
+      ctx.fillRect(-half, -half, playerSize, playerSize);
       ctx.restore();
     }
 

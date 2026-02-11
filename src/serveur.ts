@@ -37,7 +37,8 @@ const maps: Record<string, MapData> = {
             { x: 400, y: 400, width: 200, height: 20 },
             { x: 250, y: 470, width: 200, height: 20 },
         ],
-        exit: { x: 700, y: 350, width: 50, height: 50 } 
+        exit: { x: 700, y: 350, width: 50, height: 50 },
+        beginPos: { x: 250 , y: 250, width: 10, height: 10 },
     },
     "map2": { 
         name: "Map escalier", 
@@ -47,7 +48,8 @@ const maps: Record<string, MapData> = {
             { x: 150, y: 420, width: 160, height: 20 },
             { x: 300, y: 340, width: 120, height: 20 },
         ],
-        exit: { x: 350, y: 290, width: 50, height: 50 }
+        exit: { x: 350, y: 290, width: 50, height: 50 },
+        beginPos: { x: 42 , y: 42, width: 40, height: 40 },
     },
     "map3": {
         name: "map avec vide",
@@ -64,7 +66,8 @@ const maps: Record<string, MapData> = {
             {x: 330, y: 176, width: 120, height: 5, angle : 40},
             {x: 550, y: 340, width: 250, height: 5, angle : 40},
         ],
-        exit: {x: 750, y: 30, width: 50, height: 50}
+        exit: {x: 750, y: 30, width: 50, height: 50},
+        beginPos: { x: 42 , y: 42, width: 40, height: 40 },
     },
 };
 
@@ -386,8 +389,7 @@ function resetPartie(partieId: string, finishedPlayers : Set<number>){
     World.add(partieCourante.engine.world, exitBody);
     newMapBodies.push(exitBody);
 
-    partieCourante.mapBodies = newMapBodies;
-    
+    partieCourante.mapBodies = newMapBodies; 
 
 
     finishedPlayers.forEach((userId) => {
@@ -395,11 +397,17 @@ function resetPartie(partieId: string, finishedPlayers : Set<number>){
         const socketId = userToSocket.get(userId);
         if (!socketId) return;
 
-        const playerBody = Bodies.rectangle(42, 42, 40, 40, {
-            friction :0,
-            frictionAir :0.01,
-            frictionStatic :0,
-        });
+        const playerBody = Bodies.rectangle(
+            partieCourante.mapData.beginPos.x,
+            partieCourante.mapData.beginPos.y,
+            partieCourante.mapData.beginPos.width,
+            partieCourante.mapData.beginPos.height,
+            {
+                friction :0,
+                frictionAir :0.01,
+                frictionStatic :0,
+            }
+        );
 
         Body.setInertia(playerBody, Infinity);
         partieCourante.joueurs.set(userId, playerBody);
@@ -408,6 +416,8 @@ function resetPartie(partieId: string, finishedPlayers : Set<number>){
         playerInputs.set(userId, { left: false, right: false, jump: false, ah: false});
     });
     finishedPlayers.clear();
+    
+    io.to(partieId).emit("playerSize", partieCourante.mapData.beginPos.width);
    
     io.to(partieId).emit("full_reset", {
         gameMaster: partieCourante.gameMaster,
@@ -786,11 +796,18 @@ io.on("connection", (socket) => {
         }
 
         // Ajouter le joueur a la partie :(dans tous les cas si on a une connection)
-        const playerBody = Bodies.rectangle(42, 42, 40, 40,{
-            friction :0,
-            frictionAir :0.01,
-            frictionStatic :0,
-        });
+        const playerBody = Bodies.rectangle(
+            partie.mapData.beginPos.x,
+            partie.mapData.beginPos.y,
+            partie.mapData.beginPos.width,
+            partie.mapData.beginPos.height,
+            {
+                friction :0,
+                frictionAir :0.01,
+                frictionStatic :0,
+            }
+        );
+        socket.emit("playerSize", partie.mapData.beginPos.width);
         // Empêche la rotation (important pour un joueur)
         Body.setInertia(playerBody, Infinity);
         partie.joueurs.set(userId, playerBody);

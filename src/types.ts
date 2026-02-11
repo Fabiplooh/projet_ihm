@@ -38,6 +38,7 @@ export interface MapData {
     name: string;
     colliders: RectCollider[];
     exit: RectCollider;
+    beginPos: RectCollider;
 }
 
 export interface DrawnPlatform {
