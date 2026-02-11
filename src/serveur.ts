@@ -316,6 +316,7 @@ function createPlatformFromPath(partie: Partie, path : {x:number, y:number}[]) {
 function resetPartie(partieId: string, finishedPlayers : Set<number>){
     const partieCourante = parties.get(partieId); 
     if (!partieCourante) return;
+    partieCourante.isResetting = true;
 
     console.log("Tous les joueurs ont fini ! Rechargement des joueurs sur la partie :", partieId);
     const oldMaster = partieCourante.gameMaster;
@@ -335,9 +336,6 @@ function resetPartie(partieId: string, finishedPlayers : Set<number>){
     
     partieCourante.drawnPlatforms.length = 0;
     partieCourante.drawnBodies.length = 0;
-
-    io.to(partieId).emit("deleteDrawnPlatform");
-    io.to(partieId).emit("drawnPlatforms");
     
     finishedPlayers.forEach((userId) => {
         //J'ai rajouter ça pour ramettre uniquement ceux qui sont encore connecté. 
@@ -357,6 +355,13 @@ function resetPartie(partieId: string, finishedPlayers : Set<number>){
         playerInputs.set(userId, { left: false, right: false, jump: false, ah: false});
     });
     finishedPlayers.clear();
+   
+    io.to(partieId).emit("full_reset", {
+        gameMaster: partieCourante.gameMaster,
+        drawnPlatforms: partieCourante.drawnPlatforms
+    });
+    
+    partieCourante.isResetting = false;
 }
 
 function getLeader(): number | undefined {
@@ -372,7 +377,7 @@ function getLeader(): number | undefined {
     return bestId;
 }
 
-function killPlayer(partie: Partie, userId: number, finishedPlayers : Set<number>){
+/*function killPlayer(partie: Partie, userId: number, finishedPlayers : Set<number>){
     const body = partie.joueurs.get(userId);
     if (!body) return;
 
@@ -380,7 +385,7 @@ function killPlayer(partie: Partie, userId: number, finishedPlayers : Set<number
     World.remove(partie.engine.world, body);
     partie.joueurs.delete(userId);
     playerInputs.delete(userId);
-}
+}*/
 
 // Socket.IO
 // On a creer un serveur http et on connecte les joueurs (client html) qui se connecte sur la page partie. Ils sont ensuite mis dans la partie
@@ -478,10 +483,15 @@ io.on("connection", (socket) => {
 
             //On met a jour l'etat du monde : la vitesse du joueur en fonction de son input (donc de la Hashmap PlayerInput)
             const interval = setInterval(() => {
+                const partieCourante = parties.get(partieId);
+                if (!partieCourante) return;
+                if (partieCourante.isResetting) return;
       
                 const HORIZONTAL_SPEED = 6;
                 const STOP_MOUVEMENT = 0.8;
 
+                const toRemove: number[] = [];
+                let shouldReset = false;
 
                 joueurs.forEach((body, userId) => {
                     const input = playerInputs.get(userId);
@@ -513,12 +523,11 @@ io.on("connection", (socket) => {
                             }
 
                         }
+                        
                         console.log(playersScore.get(userId));
                         finishedPlayers.add(userId);
-                        World.remove(engine.world, body);
-                        playerInputs.delete(userId);
-                        joueurs.delete(userId);
-                        return;
+                        toRemove.push(userId);
+
                     }               
 
                     let vx = body.velocity.x;
@@ -583,12 +592,22 @@ io.on("connection", (socket) => {
                         input.ah = false;
                     }
                 });
+
+                for (const userId of toRemove) {
+                    const body = joueurs.get(userId);
+                    if (body) {
+                        World.remove(engine.world, body);
+                        joueurs.delete(userId);
+                        playerInputs.delete(userId);
+                    }
+                }
+
                 //Gestion des joueurs tombés 
-                const partieCourante = parties.get(partieId); 
-                if (!partieCourante) return;
                 for (const [userId, body] of partieCourante.joueurs.entries()) {
                     if (body.position.y > KILL_Y) {
-                        killPlayer(partieCourante, userId, finishedPlayers);
+                        finishedPlayers.add(userId);
+                        toRemove.push(userId);
+                        //killPlayer(partieCourante, userId, finishedPlayers);
                     }
                 }
 

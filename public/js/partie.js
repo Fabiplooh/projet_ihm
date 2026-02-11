@@ -236,14 +236,40 @@
   });
 
   let drawnPlatforms = [];
+  
+  socket.on("full_reset", (data) => {
+    // Vider toutes les données
+    joueurs = {};
+    drawnPlatforms = data.drawnPlatforms || [];
+    path = [];
+    
+    // Mettre à jour le game master
+    gameMasterId = data.gameMaster;
+    
+    // Clear le canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  });
 
-  socket.on("drawnPlatforms", data => {
-    drawnPlatforms = data;
+
+  /*socket.on("reset", () => {
+    console.log("RESET");
+
+    joueurs = {};        // vider les joueurs
+    drawnPlatforms = []; // vider les plateformes
+    colliders = [];      // vider la map
+    exitZone = null;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
   });
 
   socket.on("deleteDrawnPlatform", data => {
     path.length=0;
   });
+  */
+  socket.on("drawnPlatforms", data => {
+    drawnPlatforms = data;
+  });
+
 
   function loop() {
     console.log("[CLIENT] Loop appelée - joined:", joined);
