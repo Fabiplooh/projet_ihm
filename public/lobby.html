@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="fr">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Partie</title>
+        <link rel="stylesheet" href="css/game_style.css" />
+    </head>
+    <body>
+        <div class="lobby">
+            <div id="gestion-compte">
+                <button id="manageBtn">Gérer mon compte</button> 
+            </div>
+            <div class="menu">
+                <div class="sous-menu">
+                    <h2>Nouvelle partie</h2>
+                    <input id="partieId" placeholder="Nom de la partie" />
+                    <select id="mapSelect">
+                        <option value="map1">Map 1</option>
+                        <option value="map2">Map 2</option>
+                        <option value="map3">Map 3</option>
+                    </select>
+                    <button id="joinBtn">Rejoindre</button>
+                </div>
+                <div class="sous-menu">
+                    <h2>Rejoindre une partie</h2>
+                    <table id="partiesEnCours">
+                        <tr><th>Partie</th><th>Map en cours</th><th>Nb joueurs</th></tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </body>
+    <!-- <script src="/socket.io/socket.io.js"></script> -->
+    <script src="js/lobby.js"></script>
+</html>

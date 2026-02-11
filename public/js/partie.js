@@ -7,7 +7,7 @@
 
   const ahBlink = {}; // userId -> timeUntil
 
-  const menu = document.getElementById("menu");
+  const menu = document.getElementById("menuPartie");
   const joinBtn = document.getElementById("joinBtn");
   const partieInput = document.getElementById("partieId");
   const mapSelect = document.getElementById("mapSelect");
@@ -23,7 +23,11 @@
       loginBox.style.display === "none" ? "block" : "none";
   };
 
-  doLogin.onclick = async () => {
+  /**
+   * Désactivté, il faut passer par la page login pour se connecter 
+   */
+  
+  /*doLogin.onclick = async () => {
     const identifiant = document.getElementById("loginIdentifiant").value;
     const password = document.getElementById("loginPassword").value;
 
@@ -46,7 +50,7 @@
       loginMsg.textContent = "Identifiants invalides";
       loginMsg.style.color = "red";
     }
-  };
+  };*/
 
   manageBtn.addEventListener("click", () => {
     window.location.href = "/gestion-compte.html";
@@ -122,10 +126,6 @@
     }
   });
 
-  socket.on("map", (data) => { 
-    colliders = data; 
-    console.log("[CLIENT] Map reçue:", data);
-  });
 
   socket.on("state", (data) => {
     console.log("[CLIENT] État reçu:", data); 

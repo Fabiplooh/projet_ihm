@@ -9,6 +9,7 @@ import { Session } from "express-session"
 import bcrypt from "bcrypt";
 import { db } from "./db";
 import { User, UserLogin, UserProfile, PlayerInput, RectCollider, MapData, DrawnPlatform, Partie, PlayerState, JoinData } from "./types";
+import { log } from "console";
 declare module "express-session" {
     interface SessionData {
         userId?: number;
@@ -247,6 +248,20 @@ app.post("/auth/logout", (req, res) => {
 });
 
 
+// RECUPERATION DES PARTIES EN COURS (LOBBY)
+app.get("/parties", (req, res) => {
+    const partiesEnCours = Array.from(parties.entries()).map(([id, partie]) => ({
+        id,
+        mapId: partie.mapId,
+        nom: partie.mapData.name,
+        nbJoueurs: partie.joueurs.size // C'est pas bon
+    }));
+
+    console.log("Parties en cours :", partiesEnCours);
+
+    res.json(partiesEnCours);   
+});
+
 //Sert a détecter le sol pour éviter de sauter dans les airs et donc limiter les double ou triple sauts
 function isOnGround(body: Matter.Body, bodies: Matter.Body[], joueurs : Map<number, Matter.Body>) {
     const footY = body.bounds.max.y;
@@ -438,6 +453,11 @@ function killPlayer(partie: Partie, userId: number, finishedPlayers : Set<number
 // correspondant à leur demande et sont connecté via socket avec socket.io
 io.on("connection", (socket) => {
     console.log("Client connecté", socket.id);
+
+   // Rejoindre le lobby
+    socket.on("lobby", () => {
+        socket.emit("lobby_success");
+    });
 
     // Rejoindre une partie et demander une map
     socket.on("join", (data: JoinData) => {

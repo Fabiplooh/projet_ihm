@@ -1,4 +1,6 @@
 (() => {
+  //const socket = io();
+
   function showResult(elementId, message, isSuccess = true) {
     document.querySelectorAll('.result').forEach(elem => {
       elem.classList.remove('visible', 'error');
@@ -38,6 +40,7 @@
 
     if (res.ok) {
         console.log(res.message);
+        //socket.disconnect();
         // Redirection vers /partie après connexion réussie
         window.location.href = "/login";
     } else {

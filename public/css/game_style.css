@@ -15,14 +15,14 @@ body {
   gap: 16px; /*ecart entre le texte et le jeu*/
 }
 
-#menu {
+.menu {
   background: black;
   color: white;
   padding: 16px;
   border-radius: 8px;
 }
 
-#menu h2 {
+.menu h2 {
   text-align: center;
 }
 
@@ -66,3 +66,31 @@ body {
   color: gold;
   font-weight: bold;
 }
+
+/* Les balises du lobby */
+#gestion-compte {
+  align-items: center;
+  text-align : right;
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+#manageBtn {
+  margin-right: 12px;
+  font-weight : bold;
+}
+
+.sous-menu {
+  margin-bottom : 40px;
+}
+.lobby {
+  min-width: 600px;
+  text-align: center;
+}
+
+#partiesEnCours {
+  text-align : center;
+  width: 100%;
+}
+
+

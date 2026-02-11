@@ -1,4 +1,6 @@
 (() => {
+  //const socket = io();
+
   // Fonction pour que les boites de résultats soient invisible au début, et apparaissent que lorsque l'on a un resultat
   function showResult(elementId, message, isSuccess = true) {
     document.querySelectorAll('.result').forEach(elem => {
@@ -54,16 +56,26 @@
       return;
     }
 
-    const res = await api('/auth/login', { identifiant, password });
+    const res = await fetch("/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ identifiant, password })
+    });
     
-    if (res.ok) {
+    const data = await res.json();
+
+    if (data.ok) {
         console.log(res.message);
+
+      //Connexion à la socket our recuperer le vrai userId
+      //socket.disconnect();
+      //socket.connect();
+        
         // Redirection vers /partie après connexion réussie
         window.location.href = "/partie";
     } else {
-        alert(res.message);
+        alert(data.message);
     }
-
   };
 
   document.getElementById('btnRegister').onclick = async () => {
