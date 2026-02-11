@@ -250,6 +250,7 @@ app.post("/auth/logout", (req, res) => {
 //Sert a détecter le sol pour éviter de sauter dans les airs et donc limiter les double ou triple sauts
 function isOnGround(body: Matter.Body, bodies: Matter.Body[], joueurs : Map<number, Matter.Body>) {
     const footY = body.bounds.max.y;
+    const tolerance = 6;
     const pointsX = [ //Les trois points qu'on teste : gauche milieu et droite !
         body.position.x,
         body.bounds.min.x + 3,
@@ -259,13 +260,16 @@ function isOnGround(body: Matter.Body, bodies: Matter.Body[], joueurs : Map<numb
     const onStaticBody = bodies.some(b => {
         if (b === body || !b.isStatic){
             return false; //on continue de chercher
-        } 
+        }
+
+        const deltaY = Math.abs(b.bounds.min.y - footY);
+        if (deltaY >= tolerance) return false;
+        
         //C'est magique le .some, des qu'on a trouvé la condition, ca return sinon ca continue
         // donc si la condition en bas est true, on a trouvé un rectangle statique en dessous de nous donc on renvoie ture
         return pointsX.some(x => 
             x > b.bounds.min.x &&
-            x < b.bounds.max.x &&
-            Math.abs(b.bounds.min.y - footY) < 6
+            x < b.bounds.max.x 
         );
     });
     //Si deja au sol
@@ -274,11 +278,13 @@ function isOnGround(body: Matter.Body, bodies: Matter.Body[], joueurs : Map<numb
     //collision avec les autres joueurs 
     const onOtherPlayer = Array.from(joueurs.values()).some(otherBody => { //meme principe mais avec les joueurs 
         if (otherBody === body) return false;
-
+        
+        const deltaY = Math.abs(otherBody.bounds.min.y - footY);
+        if (deltaY >= tolerance) return false;
+        
         return pointsX.some(x =>
             x > otherBody.bounds.min.x &&
-            x < otherBody.bounds.max.x &&
-            Math.abs(otherBody.bounds.min.y - footY) < 6
+            x < otherBody.bounds.max.x
         );
     });
 
