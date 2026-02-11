@@ -31,6 +31,7 @@ export interface RectCollider {
     y: number;
     width: number;
     height: number;
+    angle?: number;
 }
 
 export interface MapData {

@@ -48,7 +48,24 @@ const maps: Record<string, MapData> = {
             { x: 300, y: 340, width: 120, height: 20 },
         ],
         exit: { x: 350, y: 290, width: 50, height: 50 }
-    }
+    },
+    "map3": {
+        name: "map avec vide",
+        colliders : [
+            {x: 743, y: 82, width: 120, height: 5},
+            {x: 743, y: 470, width: 120, height: 5},
+            {x: 512, y: 512, width: 240, height: 5},
+            {x: 13, y: 400, width: 40, height: 5},
+            {x: 13, y: 400, width: 40, height: 5},
+            {x: 50, y: 80, width: 120, height: 5},
+            {x: 170, y: 180, width: 120, height: 5},
+            {x: 170, y: 280, width: 120, height: 5},
+            {x: 230, y: 160, width: 5, height: 310},
+            {x: 330, y: 176, width: 120, height: 5, angle : 40},
+            {x: 550, y: 340, width: 250, height: 5, angle : 40},
+        ],
+        exit: {x: 750, y: 30, width: 50, height: 50}
+    },
 };
 
 const KILL_Y = 2000; // à adapter à la taille de ta map
@@ -316,6 +333,7 @@ function createPlatformFromPath(partie: Partie, path : {x:number, y:number}[]) {
 function resetPartie(partieId: string, finishedPlayers : Set<number>){
     const partieCourante = parties.get(partieId); 
     if (!partieCourante) return;
+    updateLeaderboard(partieId);
     partieCourante.isResetting = true;
 
     console.log("Tous les joueurs ont fini ! Rechargement des joueurs sur la partie :", partieId);
@@ -342,7 +360,7 @@ function resetPartie(partieId: string, finishedPlayers : Set<number>){
         const socketId = userToSocket.get(userId);
         if (!socketId) return;
 
-        const playerBody = Bodies.rectangle(400, 0, 40, 40, {
+        const playerBody = Bodies.rectangle(42, 42, 40, 40, {
             friction :0,
             frictionAir :0.01,
             frictionStatic :0,
@@ -377,7 +395,27 @@ function getLeader(): number | undefined {
     return bestId;
 }
 
-/*function killPlayer(partie: Partie, userId: number, finishedPlayers : Set<number>){
+function updateLeaderboard(partieId: string) {
+    const leaderboard = [];
+    for (const [userId, score] of playersScore.entries()) {
+        leaderboard.push({
+            userId,
+            score,
+            pseudo: playerPseudos.get(userId) || "?"
+        });
+    }
+    leaderboard.sort((a, b) => b.score - a.score);
+    
+    const partieCourante = parties.get(partieId);
+    if (partieCourante) {
+        io.to(partieId).emit("leaderboard", {
+            leaderboard,
+            gameMaster: partieCourante.gameMaster
+        });
+    }
+}
+
+function killPlayer(partie: Partie, userId: number, finishedPlayers : Set<number>){
     const body = partie.joueurs.get(userId);
     if (!body) return;
 
@@ -385,7 +423,7 @@ function getLeader(): number | undefined {
     World.remove(partie.engine.world, body);
     partie.joueurs.delete(userId);
     playerInputs.delete(userId);
-}*/
+}
 
 // Socket.IO
 // On a creer un serveur http et on connecte les joueurs (client html) qui se connecte sur la page partie. Ils sont ensuite mis dans la partie
@@ -396,7 +434,6 @@ io.on("connection", (socket) => {
     // Rejoindre une partie et demander une map
     socket.on("join", (data: JoinData) => {
         const { partieId, mapId } = data;
-      
         // récupérer userId depuis la session
         const userId = (socket.request as any).session?.userId as number | undefined;
         if (!userId) {
@@ -448,7 +485,7 @@ io.on("connection", (socket) => {
 
             // Créer le sol
             mapData.colliders.forEach(g => {
-                const ground = Bodies.rectangle(g.x, g.y, g.width, g.height, { isStatic: true });
+                const ground = Bodies.rectangle(g.x, g.y, g.width, g.height, { isStatic: true, angle: g.angle ? (g.angle * Math.PI / 180) : 0 });
                 World.add(engine.world, [ground]);
             });
             //creer le bord de map
@@ -527,7 +564,7 @@ io.on("connection", (socket) => {
                         console.log(playersScore.get(userId));
                         finishedPlayers.add(userId);
                         toRemove.push(userId);
-
+                        updateLeaderboard(partieId);
                     }               
 
                     let vx = body.velocity.x;
@@ -605,9 +642,9 @@ io.on("connection", (socket) => {
                 //Gestion des joueurs tombés 
                 for (const [userId, body] of partieCourante.joueurs.entries()) {
                     if (body.position.y > KILL_Y) {
-                        finishedPlayers.add(userId);
-                        toRemove.push(userId);
-                        //killPlayer(partieCourante, userId, finishedPlayers);
+                        //finishedPlayers.add(userId);
+                        //toRemove.push(userId);
+                        killPlayer(partieCourante, userId, finishedPlayers);
                     }
                 }
 
@@ -631,7 +668,7 @@ io.on("connection", (socket) => {
                         pseudoPlayer : playerPseudos.get(userId) || "Joueur", //pseudo par defaut si jamais
                     };
                 });
-                const leaderboard = [];
+                /*const leaderboard = [];
                 for (const [userId, score] of playersScore.entries()) {
                     leaderboard.push({
                         userId,
@@ -643,7 +680,7 @@ io.on("connection", (socket) => {
                 io.to(partieId).emit("leaderboard", {
                     leaderboard,
                     gameMaster: partieCourante.gameMaster
-                });
+                });*/
 
                 // Ici on envoie bien qu'au gens de la room partieID
                 io.to(partieId).emit("state", etat);
@@ -677,7 +714,7 @@ io.on("connection", (socket) => {
         }
 
         // Ajouter le joueur a la partie :(dans tous les cas si on a une connection)
-        const playerBody = Bodies.rectangle(400, 0, 40, 40,{
+        const playerBody = Bodies.rectangle(42, 42, 40, 40,{
             friction :0,
             frictionAir :0.01,
             frictionStatic :0,
@@ -687,6 +724,7 @@ io.on("connection", (socket) => {
         partie.joueurs.set(userId, playerBody);
         World.add(partie.engine.world, [playerBody]);
         socket.emit("join_success");
+        updateLeaderboard(partieId);
     });
 
 
@@ -749,6 +787,8 @@ io.on("connection", (socket) => {
                 playerColors.delete(userId);
                 playerPseudos.delete(userId);
                 playerInputs.delete(userId);
+                playersScore.delete(userId);     
+                ahCooldown.delete(userId);
             }
 
             //Gestion du dico si il n'y a plus de joueurs dans le salon courant 

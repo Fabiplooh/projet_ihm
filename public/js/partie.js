@@ -319,12 +319,12 @@
 
     ctx.fillStyle = "grey";
     for (const c of colliders) {
-      ctx.fillRect(
-        c.x - c.width / 2,
-        c.y - c.height / 2,
-        c.width,
-        c.height
-      );
+          ctx.save();
+          ctx.translate(c.x, c.y);
+          ctx.rotate((c.angle || 0) * Math.PI / 180);
+          //ctx.rotate(c.angle || 0); // en radians, si serveur en degrés → c.angle * Math.PI / 180
+          ctx.fillRect(-c.width / 2, -c.height / 2, c.width, c.height);
+          ctx.restore();
     }
 
     if (exitZone) {
