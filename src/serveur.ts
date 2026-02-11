@@ -69,9 +69,8 @@ const playerInputs = new Map<number, PlayerInput>()
 // clé userId - valeur : score actuel
 const playersScore = new Map<number, number>();
 
-
-
-
+const ahCooldown = new Map<number, number>(); // userId -> timestamp du prochain ah autorisé
+const AH_COOLDOWN_MS = 1500; // 1.5 secondes
 
 // Créer le serveur HTTP et Socket.IO
 const httpServer = createServer(app);
@@ -232,7 +231,6 @@ app.post("/auth/logout", (req, res) => {
 
 
 //Sert a détecter le sol pour éviter de sauter dans les airs et donc limiter les double ou triple sauts
-//On pourrait rajouter le fait de sauter l'un sur l'autre en parcourant le dico de joueur
 function isOnGround(body: Matter.Body, bodies: Matter.Body[], joueurs : Map<number, Matter.Body>) {
     const footY = body.bounds.max.y;
     const pointsX = [ //Les trois points qu'on teste : gauche milieu et droite !
@@ -518,8 +516,8 @@ io.on("connection", (socket) => {
                         console.log(playersScore.get(userId));
                         finishedPlayers.add(userId);
                         World.remove(engine.world, body);
-                        joueurs.delete(userId);
                         playerInputs.delete(userId);
+                        joueurs.delete(userId);
                         return;
                     }               
 
@@ -689,7 +687,19 @@ io.on("connection", (socket) => {
         if (action === "stopLeft") input.left = false;
         if (action === "stopRight") input.right = false;
         if (action === "jump") input.jump = true;
-        if (action ==="ah") input.ah = true;
+        if (action ==="ah"){
+            const now = Date.now();
+            const nextAllowed = ahCooldown.get(userId) || 0;
+            if (now < nextAllowed){
+                socket.emit("ah_refuse", {remaining : nextAllowed - now});
+                return;
+            }
+            ahCooldown.set(userId, now + AH_COOLDOWN_MS); // on remet le cooldown vu qu'il vient de l'utiliser.
+            input.ah = true;
+            socket.emit("ah_ok", {cooldown : AH_COOLDOWN_MS});
+        
+
+        }
     });
 
     socket.on("action_master", (path: Array<{ x: number; y: number }>) => {

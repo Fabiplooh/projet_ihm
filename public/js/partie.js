@@ -5,6 +5,8 @@
   canvas.width = 800;
   canvas.height = 600;
 
+  const ahBlink = {}; // userId -> timeUntil
+
   const menu = document.getElementById("menu");
   const joinBtn = document.getElementById("joinBtn");
   const partieInput = document.getElementById("partieId");
@@ -165,7 +167,15 @@
     });
 
   });
-  
+ 
+  socket.on("ah_ok", data => {
+    // Le serveur a accepté le AH
+    ahBlink[myId] = Date.now() + 200; // 200ms de clignotement
+  });
+
+  socket.on("ah_refuse", data => {
+    console.log("AH en cooldown :", data.remaining, "ms");
+  });
 
   socket.on("game_master", (id) => {
     gameMasterId = id;
@@ -245,7 +255,15 @@
       ctx.save();
       ctx.translate(p.x, p.y);
       ctx.rotate(p.angle);
-      ctx.fillStyle =  p.colorPlayer || "blue";
+      let color = p.colorPlayer || "blue";
+
+      if (ahBlink[id] && Date.now() < ahBlink[id]) {
+        // effet de clignotement
+        color = "white";
+      }
+
+      ctx.fillStyle = color;
+
       ctx.fillRect(-20, -20, 40, 40);
       ctx.restore();
     }
