@@ -98,6 +98,9 @@ body {
   width: 100%;
 }
 
+.invisible {
+  display : none
+}
 
 /* Balise jeu mobile */
 #mobileControls {
@@ -124,3 +127,5 @@ body {
 #mobileControls button:active {
   background: rgba(255, 255, 255, 0.3);
 }
+
+

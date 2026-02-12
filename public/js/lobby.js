@@ -25,6 +25,12 @@ async function chargerParties() {
     const response = await fetch("/parties");
     const parties = await response.json();
 
+    if(parties.length === 0) {
+      document.querySelector("#rejoindrePartie").classList.add("invisible");
+    } else {
+      document.querySelector("#rejoindrePartie").classList.remove("invisible");
+    }
+
     partiesHTML = document.getElementById('partiesEnCours')
     partiesHTML.innerHTML += parties.map(p =>
                                               `<tr>

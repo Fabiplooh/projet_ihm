@@ -83,6 +83,10 @@
     }
   });
 
+  socket.on("no_map_id", () => {
+      window.location.href = "/lobby.html";
+  });
+
   backBtn.addEventListener("click", () => {
     window.location.href = "/lobby.html";
   });

@@ -738,6 +738,11 @@ io.on("connection", (socket) => {
         let partie = parties.get(partieId);
 
         if (!partie) {
+            if (mapId == null || !(mapId in maps)) {
+                socket.emit("no_map_id")
+                return;
+            }
+            
             socket.emit("connection_first_on_server");
             const mapData = maps[mapId];
             if (!mapData){
@@ -973,7 +978,11 @@ io.on("connection", (socket) => {
             socket.emit("map", {colliders: mapData.colliders, exit: mapData.exit});
         }
         else {
-            socket.emit("connection_not_first");
+            console.log("Map id : ", mapId)
+            if (mapId !== null) {
+                socket.emit("connection_not_first");
+            }
+            
             if (partie.gameMaster !== undefined) {
                 socket.emit("game_master", partie.gameMaster);
             }

@@ -39,6 +39,7 @@
   btnJoinGame.id = "btn_joinGame"
   btnJoinGame.className = "greenBtn";
   btnJoinGame.appendChild(document.createTextNode("C'est parti !"));
+  
   btnJoinGame.addEventListener("click", () => {
     window.location.href = "/lobby";
   });
