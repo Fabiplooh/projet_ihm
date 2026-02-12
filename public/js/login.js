@@ -38,9 +38,9 @@
   const btnJoinGame = document.createElement("button");
   btnJoinGame.id = "btn_joinGame"
   btnJoinGame.className = "greenBtn";
-  btnJoinGame.appendChild(document.createTextNode("Rejoindre la partie"));
+  btnJoinGame.appendChild(document.createTextNode("C'est parti !"));
   btnJoinGame.addEventListener("click", () => {
-    window.location.href = "/partie";
+    window.location.href = "/lobby";
   });
 
   const regActions = document.getElementById("regActions");
@@ -72,7 +72,7 @@
       //socket.connect();
         
         // Redirection vers /partie après connexion réussie
-        window.location.href = "/partie";
+        window.location.href = "/lobby";
     } else {
         alert(data.message);
     }
@@ -108,7 +108,7 @@
     if (res.ok) {
         console.log(res.message);
         // Redirection vers /partie après connexion réussie
-        window.location.href = "/partie";
+        window.location.href = "/lobby";
     } else {
         alert(res.message);
     }

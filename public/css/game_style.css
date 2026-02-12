@@ -2,6 +2,7 @@ body {
   margin: 0;
   background: #222;
   display: flex;
+  flex-direction: column;
   justify-content: center;  /* centre horizontalement */
   align-items: center;      /* centre verticalement */
   height: 100vh;
@@ -67,19 +68,23 @@ body {
   font-weight: bold;
 }
 
-/* Les balises du lobby */
-#gestion-compte {
+.menu-haut {
   align-items: center;
   text-align : right;
   width: 100%;
   margin-bottom: 10px;
 }
 
-#manageBtn {
+#menu-jeu {
+  width: 800px;
+}
+
+.bouton-haut {
   margin-right: 12px;
   font-weight : bold;
 }
 
+/* Les balises du lobby */
 .sous-menu {
   margin-bottom : 40px;
 }
@@ -93,6 +98,8 @@ body {
   width: 100%;
 }
 
+
+/* Balise jeu mobile */
 #mobileControls {
   position: fixed;
   bottom: 20px;

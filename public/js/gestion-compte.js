@@ -25,7 +25,7 @@
 
   const backBtn = document.getElementById("backBtn");
   backBtn.onclick = async () => {
-    window.location.href = "/partie";
+    window.location.href = "/lobby";
   };
 
   // Comportement profil

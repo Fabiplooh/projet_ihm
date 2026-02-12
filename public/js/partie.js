@@ -29,26 +29,13 @@
 
 
   const ahBlink = {}; // userId -> timeUntil
-
-  const menu = document.getElementById("menuPartie");
-  const joinBtn = document.getElementById("joinBtn");
-  const partieInput = document.getElementById("partieId");
-  const mapSelect = document.getElementById("mapSelect");
-  const manageBtn = document.getElementById("manageBtn");
-  const openLogin = document.getElementById("openLogin");
-  const loginBox = document.getElementById("loginBox");
-  const doLogin = document.getElementById("doLogin");
-  const loginMsg = document.getElementById("loginMsg");
   const leaderboardDiv = document.getElementById("leaderboardList");
   const leftBtn = document.getElementById("leftBtn");
   const rightBtn = document.getElementById("rightBtn");
   const jumpBtn = document.getElementById("jumpBtn");
   const ahBtn = document.getElementById("ahBtn");
+   const socket = io();
 
-  openLogin.onclick = () => {
-    loginBox.style.display =
-      loginBox.style.display === "none" ? "block" : "none";
-  };
 
   window.onload = (event) => {
     if(idPartie !==null && idPartie !== undefined){
@@ -61,40 +48,44 @@
     }
   };
 
-  /**
-   * Désactivté, il faut passer par la page login pour se connecter 
-   */
-  
-  /*doLogin.onclick = async () => {
-    const identifiant = document.getElementById("loginIdentifiant").value;
-    const password = document.getElementById("loginPassword").value;
-
-    const res = await fetch("/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ identifiant, password })
+  function joinPartie(partieId, mapId) {
+    socket.emit("join", { 
+      partieId, 
+      mapId 
     });
+  }
 
-    const data = await res.json();
+  socket.on("connect", () => console.log("Socket.IO connecté", socket.id));
+  socket.on("connect_error", (err) => console.error("Erreur connexion", err));
 
-    if (data.ok) {
-      loginMsg.textContent = "Connecté !";
-      loginMsg.style.color = "lime";
-      //Pour recuperer le vrai userId
-      socket.disconnect();
-      socket.connect();
-
-    } else {
-      loginMsg.textContent = "Identifiants invalides";
-      loginMsg.style.color = "red";
+  socket.on("connection_first_on_server", () => {
+    if (joinAlertsDone){
+      return;
     }
-  };*/
-
-  manageBtn.addEventListener("click", () => {
-    window.location.href = "/gestion-compte.html";
+    joinAlertsDone = true;
+    alert("Tu es le premier sur ce salon !");
   });
 
-  const socket = io();
+  socket.on("connection_not_first", () => {
+    if (joinAlertsDone){
+      return;
+    }
+    joinAlertsDone = true;
+    alert("Le nom de partie que tu as choisi existe déjà... Te voilà donc catapulté dans cette partie ! ;)");
+  });
+
+  socket.on("join_error", (msg) => {
+    if (msg === "not_logged_in"){
+      alert("Non connecté. Va te login.");
+    }
+    else {
+      alert("Erreur join: " + msg);
+    }
+  });
+
+  backBtn.addEventListener("click", () => {
+    window.location.href = "/lobby.html";
+  });
 
   const keys = {
     left: false,
@@ -209,34 +200,6 @@
       leaderboardDiv.appendChild(div);
     });
   });
-  
-  socket.on("connect", () => console.log("Socket.IO connecté", socket.id));
-  socket.on("connect_error", (err) => console.error("Erreur connexion", err));
-
-  socket.on("connection_first_on_server", () => {
-    if (joinAlertsDone){
-      return;
-    }
-    joinAlertsDone = true;
-    alert("Tu es le premier sur ce salon !");
-  });
-
-  socket.on("connection_not_first", () => {
-    if (joinAlertsDone){
-      return;
-    }
-    joinAlertsDone = true;
-    alert("Tu rejoins un salon déjà créer (ce ne sera peut être pas la même map que celle que tu as choisis)!");
-  });
-
-  socket.on("join_error", (msg) => {
-    if (msg === "not_logged_in"){
-      alert("Non connecté. Va te login.");
-    }
-    else {
-      alert("Erreur join: " + msg);
-    }
-  });
 
   socket.on("state", (data) => {
     console.log("[CLIENT] État reçu:", data); 
@@ -251,39 +214,20 @@
 
   socket.on("join_success", () => {
     console.log("[CLIENT] Join réussi !");
-    menu.style.display = "none";
     canvas.style.display = "block";
     joined = true;
+    
+    const leaderBoard = document.getElementById("leaderboard");
+    leaderBoard.style.display = "block";
 
     //Pour recuperer le vrai userId
     //socket.disconnect();
     //socket.connect();
-    
-    const leaderBoard = document.getElementById("leaderboard");
-    leaderBoard.style.display = "block";
+  
   });
 
   socket.on("player_exit", () => {
     //alert("Vous avez atteint la sortie !");
-  });
-
-  function joinPartie(partieId, mapId) {
-    socket.emit("join", { 
-      partieId, 
-      mapId 
-    });
-  }
-
-  joinBtn.addEventListener("click", async() => {
-    const partieId = partieInput.value.trim();
-    const mapId = mapSelect.value;
-
-    if (!partieId) {
-      alert("Entre un nom de partie");
-      return;
-    }
-
-    joinPartie(partieId, mapId);
   });
  
   socket.on("ah_ok", data => {

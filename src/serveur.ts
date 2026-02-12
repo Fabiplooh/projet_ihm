@@ -317,7 +317,13 @@ app.use((req, res, next) => {
 
 // Page d'accueil
 app.get("/", (req: Request, res: Response) => {
-    res.redirect("/partie");
+    res.redirect("/lobby.html");
+        return;
+});
+
+// Page d'accueil
+app.get("/lobby", (req: Request, res: Response) => {
+    res.sendFile(path.join(__dirname,"..","public","partie.html"));
         return;
 });
 

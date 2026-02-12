@@ -7,50 +7,11 @@
         <link rel="stylesheet" href="css/game_style.css" />
     </head>
     <body>
-        <div id="partie">
-            <div class="menu" id="menuPartie">
-                
-                <h2>Rejoindre une partie</h2>
-
-                <input id="partieId" placeholder="Nom de la partie" />
-                
-                <select id="mapSelect">
-                    <option value="map1">Map 1</option>
-                    <option value="map2">Map 2</option>
-                    <option value="map3">Map 3</option>
-                    <option value="map4">Map 4</option>
-                    <option value="map5">Map 5</option>
-                    <option value="map6">Map 6</option>
-                    <option value="map7">Map 7</option>
-                    <option value="map8">Map 8</option>
-                    <option value="map9">Map 9</option>
-                    <option value="map10">Map 10</option>
-                    <option value="map11">Map 11</option>
-                </select>
-                
-                <!-- Le for dans le label sert a faire en sorte que quand on appuit sur le texte "Couleur", ca relie au id colorPick et donc ouvre la boite de selection
-                <label for="colorPick">Couleur :</label>
-                <input id="colorPick" type="color" value="#ff8800" />
-                
-                <input id="playerPseudo" placeholder="Pseudo" />            -->
-
-                <button id="joinBtn">Rejoindre</button>
+        <div class="menu-haut" id="menu-jeu">
+            <button class="bouton-haut" id="backBtn">Retour au lobby</button> 
+        </div>
         
-                <button id="openLogin">Se connecter</button>
-                
-                <!-- Autre facon de se déplacer avec le href, c'est plus classique et html friendly x)
-                <a href="/login.html" class="button">Gérer mon compte</a>
-                -->
-                
-                <button id="manageBtn">Gérer mon compte</button> 
-
-                <div id="loginBox" style="display:none; margin-top:10px;">
-                    <input id="loginIdentifiant" placeholder="identifiant">
-                    <input id="loginPassword" type="password" placeholder="Mot de passe">
-                    <button id="doLogin">Valider</button>
-                    <div id="loginMsg"></div>
-                </div>
-            </div>
+        <div id="partie">
             <canvas id="c" width="800" height="600"></canvas>
             <div id="leaderboard" style="display:none;">
               <h3>Classement</h3>

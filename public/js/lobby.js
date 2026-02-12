@@ -2,9 +2,9 @@
 
 const partieInput = document.getElementById("partieId");
 const creerPartieBtn = document.getElementById("creerPartieBtn");
-const backBtn = document.getElementById("manageBtn");
+const manageBtn = document.getElementById("manageBtn");
 
-backBtn.onclick = async () => {
+manageBtn.onclick = async () => {
   window.location.href = "/gestion-compte.html";
 };
 
