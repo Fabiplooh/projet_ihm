@@ -2,8 +2,26 @@
 (function(){
   const canvas = document.getElementById("c");
   const ctx = canvas.getContext("2d");
-  canvas.width = 800;
-  canvas.height = 600;
+  
+  const SERVER_WIDTH = 800;
+  const SERVER_HEIGHT = 600;
+  canvas.width = SERVER_WIDTH;
+  canvas.height = SERVER_HEIGHT;
+
+  // REDIMENSIONNEMENT pour les différents écrans
+  function resizeCanvas() {
+    const maxWidth = window.innerWidth - 20; //Calcul la taille max de l'ecran
+    const maxHeight = window.innerHeight - 100; // espace pour contrôles et menu
+    
+    const scale = Math.min(maxWidth / SERVER_WIDTH, maxHeight / SERVER_HEIGHT, 1);
+    
+    canvas.style.width = (SERVER_WIDTH * scale) + "px";
+    canvas.style.height = (SERVER_HEIGHT * scale) + "px";
+  }
+
+  resizeCanvas();
+  window.addEventListener("resize", resizeCanvas);
+
 
   const ahBlink = {}; // userId -> timeUntil
 
@@ -67,13 +85,12 @@
     right: false
   };
 
-  /*var touchDevice = ('ontouchstart' in document.documentElement);
+  var touchDevice = ('ontouchstart' in document.documentElement);
   if (touchDevice){
     document.getElementById("mobileControls").style.display = "flex";
-  }*/
+  }
 
-  document.getElementById("mobileControls").style.display = "flex";
-    // ===== BOUTON GAUCHE =====
+  //document.getElementById("mobileControls").style.display = "flex";
   leftBtn.addEventListener("touchstart", e => {
     e.preventDefault();
     socket.emit("action", "left");
@@ -82,7 +99,7 @@
     e.preventDefault();
     socket.emit("action", "stopLeft");
   });
-  leftBtn.addEventListener("mousedown", e => {
+  /*leftBtn.addEventListener("mousedown", e => {
     e.preventDefault();
     socket.emit("action", "left");
   });
@@ -94,9 +111,8 @@
     if (e.buttons === 1) {
       socket.emit("action", "stopLeft");
     }
-  });
+  });*/
 
-  // ===== BOUTON DROITE =====
   rightBtn.addEventListener("touchstart", e => {
     e.preventDefault();
     socket.emit("action", "right");
@@ -105,7 +121,7 @@
     e.preventDefault();
     socket.emit("action", "stopRight");
   });
-  rightBtn.addEventListener("mousedown", e => {
+  /*rightBtn.addEventListener("mousedown", e => {
     e.preventDefault();
     socket.emit("action", "right");
   });
@@ -117,27 +133,25 @@
     if (e.buttons === 1) {
       socket.emit("action", "stopRight");
     }
-  });
+  });*/
 
-  // ===== BOUTON JUMP =====
   jumpBtn.addEventListener("touchstart", e => {
     e.preventDefault();
     socket.emit("action", "jump");
   });
-  jumpBtn.addEventListener("mousedown", e => {
+  /*jumpBtn.addEventListener("mousedown", e => {
     e.preventDefault();
     socket.emit("action", "jump");
-  });
+  });*/
 
-  // ===== BOUTON AH =====
   ahBtn.addEventListener("touchstart", e => {
     e.preventDefault();
     socket.emit("action", "ah");
   });
-  ahBtn.addEventListener("mousedown", e => {
+  /*ahBtn.addEventListener("mousedown", e => {
     e.preventDefault();
     socket.emit("action", "ah");
-  });
+  });*/
 
 
   let joueurs = {};
