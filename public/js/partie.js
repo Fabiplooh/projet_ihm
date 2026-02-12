@@ -1,5 +1,10 @@
 // Partie client-side script moved from partie.html
 (function(){
+  // Récupération du paramètre en entrée de l'URL ()
+  const urlParams = new URLSearchParams(window.location.search);
+  const idPartie = urlParams.get('idPartie');
+  const mapId = urlParams.get('mapId');
+
   const canvas = document.getElementById("c");
   const ctx = canvas.getContext("2d");
   canvas.width = 800;
@@ -21,6 +26,17 @@
   openLogin.onclick = () => {
     loginBox.style.display =
       loginBox.style.display === "none" ? "block" : "none";
+  };
+
+  window.onload = (event) => {
+    if(idPartie !==null && idPartie !== undefined){
+      if (mapId == undefined)
+        joinPartie(idPartie, null);
+      else
+        joinPartie(idPartie, mapId);
+    } else {
+      window.location.href = "/lobby.html";
+    }
   };
 
   /**
@@ -148,6 +164,10 @@
     canvas.style.display = "block";
     joined = true;
 
+    //Pour recuperer le vrai userId
+    //socket.disconnect();
+    //socket.connect();
+    
     const leaderBoard = document.getElementById("leaderboard");
     leaderBoard.style.display = "block";
   });
@@ -156,6 +176,12 @@
     //alert("Vous avez atteint la sortie !");
   });
 
+  function joinPartie(partieId, mapId) {
+    socket.emit("join", { 
+      partieId, 
+      mapId 
+    });
+  }
 
   joinBtn.addEventListener("click", async() => {
     const partieId = partieInput.value.trim();
@@ -166,11 +192,7 @@
       return;
     }
 
-    socket.emit("join", { 
-      partieId, 
-      mapId, 
-    });
-
+    joinPartie(partieId, mapId);
   });
  
   socket.on("ah_ok", data => {
@@ -374,4 +396,5 @@
   }
 
   loop();
+  
 })();
