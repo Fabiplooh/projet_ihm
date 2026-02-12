@@ -320,12 +320,15 @@
     e.preventDefault();
     const rectToServ = canvas.getBoundingClientRect();
     const touch = e.touches[0];
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    path.push({
-      x: (touch.clientX - rectToServ.left) * scaleX,
-      y: (touch.clientY - rectToServ.top) * scaleY
-    });
+    
+    // Position relative dans le canvas visible
+    const relX = touch.clientX - rectToServ.left;
+    const relY = touch.clientY - rectToServ.top;
+    
+    // Conversion vers coordonnées serveur (800x600)
+    const x = (relX / rectToServ.width) * SERVER_WIDTH;
+    const y = (relY / rectToServ.height) * SERVER_HEIGHT;  
+    path.push({ x, y });
   });
 
 
