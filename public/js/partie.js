@@ -320,9 +320,11 @@
     e.preventDefault();
     const rectToServ = canvas.getBoundingClientRect();
     const touch = e.touches[0];
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
     path.push({
-      x: touch.clientX - rectToServ.left,
-      y: touch.clientY - rectToServ.top
+      x: (touch.clientX - rectToServ.left) * scaleX,
+      y: (touch.clientY - rectToServ.top) * scaleY
     });
   });
 
