@@ -93,4 +93,27 @@ body {
   width: 100%;
 }
 
+#mobileControls {
+  position: fixed;
+  bottom: 20px;
+  width: 100%;
+  display: flex;
+  justify-content: space-around;
+  z-index: 100;
+}
 
+#mobileControls button {
+  width: 70px;
+  height: 70px;
+  background: rgba(0, 0, 0, 0.7);
+  border: 2px solid white;
+  color: white;
+  font-size: 18px;
+  border-radius: 50%;
+  user-select: none;
+  cursor: pointer;
+}
+
+#mobileControls button:active {
+  background: rgba(255, 255, 255, 0.3);
+}

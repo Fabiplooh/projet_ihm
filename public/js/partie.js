@@ -7,8 +7,26 @@
 
   const canvas = document.getElementById("c");
   const ctx = canvas.getContext("2d");
-  canvas.width = 800;
-  canvas.height = 600;
+  
+  const SERVER_WIDTH = 800;
+  const SERVER_HEIGHT = 600;
+  canvas.width = SERVER_WIDTH;
+  canvas.height = SERVER_HEIGHT;
+
+  // REDIMENSIONNEMENT pour les différents écrans
+  function resizeCanvas() {
+    const maxWidth = window.innerWidth - 20; //Calcul la taille max de l'ecran
+    const maxHeight = window.innerHeight - 100; // espace pour contrôles et menu
+    
+    const scale = Math.min(maxWidth / SERVER_WIDTH, maxHeight / SERVER_HEIGHT, 1);
+    
+    canvas.style.width = (SERVER_WIDTH * scale) + "px";
+    canvas.style.height = (SERVER_HEIGHT * scale) + "px";
+  }
+
+  resizeCanvas();
+  window.addEventListener("resize", resizeCanvas);
+
 
   const ahBlink = {}; // userId -> timeUntil
 
@@ -22,6 +40,10 @@
   const doLogin = document.getElementById("doLogin");
   const loginMsg = document.getElementById("loginMsg");
   const leaderboardDiv = document.getElementById("leaderboardList");
+  const leftBtn = document.getElementById("leftBtn");
+  const rightBtn = document.getElementById("rightBtn");
+  const jumpBtn = document.getElementById("jumpBtn");
+  const ahBtn = document.getElementById("ahBtn");
 
   openLogin.onclick = () => {
     loginBox.style.display =
@@ -78,6 +100,75 @@
     left: false,
     right: false
   };
+
+  var touchDevice = ('ontouchstart' in document.documentElement);
+  if (touchDevice){
+    document.getElementById("mobileControls").style.display = "flex";
+  }
+
+  //document.getElementById("mobileControls").style.display = "flex";
+  leftBtn.addEventListener("touchstart", e => {
+    e.preventDefault();
+    socket.emit("action", "left");
+  });
+  leftBtn.addEventListener("touchend", e => {
+    e.preventDefault();
+    socket.emit("action", "stopLeft");
+  });
+  /*leftBtn.addEventListener("mousedown", e => {
+    e.preventDefault();
+    socket.emit("action", "left");
+  });
+  leftBtn.addEventListener("mouseup", e => {
+    e.preventDefault();
+    socket.emit("action", "stopLeft");
+  });
+  leftBtn.addEventListener("mouseleave", e => {
+    if (e.buttons === 1) {
+      socket.emit("action", "stopLeft");
+    }
+  });*/
+
+  rightBtn.addEventListener("touchstart", e => {
+    e.preventDefault();
+    socket.emit("action", "right");
+  });
+  rightBtn.addEventListener("touchend", e => {
+    e.preventDefault();
+    socket.emit("action", "stopRight");
+  });
+  /*rightBtn.addEventListener("mousedown", e => {
+    e.preventDefault();
+    socket.emit("action", "right");
+  });
+  rightBtn.addEventListener("mouseup", e => {
+    e.preventDefault();
+    socket.emit("action", "stopRight");
+  });
+  rightBtn.addEventListener("mouseleave", e => {
+    if (e.buttons === 1) {
+      socket.emit("action", "stopRight");
+    }
+  });*/
+
+  jumpBtn.addEventListener("touchstart", e => {
+    e.preventDefault();
+    socket.emit("action", "jump");
+  });
+  /*jumpBtn.addEventListener("mousedown", e => {
+    e.preventDefault();
+    socket.emit("action", "jump");
+  });*/
+
+  ahBtn.addEventListener("touchstart", e => {
+    e.preventDefault();
+    socket.emit("action", "ah");
+  });
+  /*ahBtn.addEventListener("mousedown", e => {
+    e.preventDefault();
+    socket.emit("action", "ah");
+  });*/
+
 
   let joueurs = {};
   let colliders =[];
@@ -229,6 +320,40 @@
       y: e.clientY - rectToServ.top
     });
   });
+
+  //Pour les mobiles:  
+  canvas.addEventListener("touchstart", e => {
+    if(gameMasterId !== myId) return;
+    e.preventDefault();
+    drawing = true;
+    path = [];
+  });
+
+  canvas.addEventListener("touchend", e => {
+    if(gameMasterId !== myId) return;
+    e.preventDefault();
+    drawing = false;
+    socket.emit("action_master", path);
+    path = [];
+  });
+
+  canvas.addEventListener("touchmove", e => {
+    if(!drawing || gameMasterId !== myId) return;
+    e.preventDefault();
+    const rectToServ = canvas.getBoundingClientRect();
+    const touch = e.touches[0];
+    
+    // Position relative dans le canvas visible
+    const relX = touch.clientX - rectToServ.left;
+    const relY = touch.clientY - rectToServ.top;
+    
+    // Conversion vers coordonnées serveur (800x600)
+    const x = (relX / rectToServ.width) * SERVER_WIDTH;
+    const y = (relY / rectToServ.height) * SERVER_HEIGHT;  
+    path.push({ x, y });
+  });
+
+
 
   document.addEventListener("keydown", (e) => {
     if (e.repeat) return;
