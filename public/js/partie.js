@@ -17,6 +17,10 @@
   const doLogin = document.getElementById("doLogin");
   const loginMsg = document.getElementById("loginMsg");
   const leaderboardDiv = document.getElementById("leaderboardList");
+  const leftBtn = document.getElementById("leftBtn");
+  const rightBtn = document.getElementById("rightBtn");
+  const jumpBtn = document.getElementById("jumpBtn");
+  const ahBtn = document.getElementById("ahBtn");
 
   openLogin.onclick = () => {
     loginBox.style.display =
@@ -62,6 +66,79 @@
     left: false,
     right: false
   };
+
+  /*var touchDevice = ('ontouchstart' in document.documentElement);
+  if (touchDevice){
+    document.getElementById("mobileControls").style.display = "flex";
+  }*/
+
+  document.getElementById("mobileControls").style.display = "flex";
+    // ===== BOUTON GAUCHE =====
+  leftBtn.addEventListener("touchstart", e => {
+    e.preventDefault();
+    socket.emit("action", "left");
+  });
+  leftBtn.addEventListener("touchend", e => {
+    e.preventDefault();
+    socket.emit("action", "stopLeft");
+  });
+  leftBtn.addEventListener("mousedown", e => {
+    e.preventDefault();
+    socket.emit("action", "left");
+  });
+  leftBtn.addEventListener("mouseup", e => {
+    e.preventDefault();
+    socket.emit("action", "stopLeft");
+  });
+  leftBtn.addEventListener("mouseleave", e => {
+    if (e.buttons === 1) {
+      socket.emit("action", "stopLeft");
+    }
+  });
+
+  // ===== BOUTON DROITE =====
+  rightBtn.addEventListener("touchstart", e => {
+    e.preventDefault();
+    socket.emit("action", "right");
+  });
+  rightBtn.addEventListener("touchend", e => {
+    e.preventDefault();
+    socket.emit("action", "stopRight");
+  });
+  rightBtn.addEventListener("mousedown", e => {
+    e.preventDefault();
+    socket.emit("action", "right");
+  });
+  rightBtn.addEventListener("mouseup", e => {
+    e.preventDefault();
+    socket.emit("action", "stopRight");
+  });
+  rightBtn.addEventListener("mouseleave", e => {
+    if (e.buttons === 1) {
+      socket.emit("action", "stopRight");
+    }
+  });
+
+  // ===== BOUTON JUMP =====
+  jumpBtn.addEventListener("touchstart", e => {
+    e.preventDefault();
+    socket.emit("action", "jump");
+  });
+  jumpBtn.addEventListener("mousedown", e => {
+    e.preventDefault();
+    socket.emit("action", "jump");
+  });
+
+  // ===== BOUTON AH =====
+  ahBtn.addEventListener("touchstart", e => {
+    e.preventDefault();
+    socket.emit("action", "ah");
+  });
+  ahBtn.addEventListener("mousedown", e => {
+    e.preventDefault();
+    socket.emit("action", "ah");
+  });
+
 
   let joueurs = {};
   let colliders =[];
@@ -207,6 +284,35 @@
       y: e.clientY - rectToServ.top
     });
   });
+
+  //Pour les mobiles:  
+  canvas.addEventListener("touchstart", e => {
+    if(gameMasterId !== myId) return;
+    e.preventDefault();
+    drawing = true;
+    path = [];
+  });
+
+  canvas.addEventListener("touchend", e => {
+    if(gameMasterId !== myId) return;
+    e.preventDefault();
+    drawing = false;
+    socket.emit("action_master", path);
+    path = [];
+  });
+
+  canvas.addEventListener("touchmove", e => {
+    if(!drawing || gameMasterId !== myId) return;
+    e.preventDefault();
+    const rectToServ = canvas.getBoundingClientRect();
+    const touch = e.touches[0];
+    path.push({
+      x: touch.clientX - rectToServ.left,
+      y: touch.clientY - rectToServ.top
+    });
+  });
+
+
 
   document.addEventListener("keydown", (e) => {
     if (e.repeat) return;
